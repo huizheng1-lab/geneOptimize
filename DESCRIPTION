@@ -1,0 +1,12 @@
+Package: geneOptimize
+Type: Package
+Title: Flexible Genetic Algorithms for Variable Selection
+Version: 0.1.1
+Author: Hui [aut, cre]
+Maintainer: Hui <hui@example.com>
+Description: A modular and object-oriented framework for running genetic algorithms and memetic algorithms, with support for custom operators and variable selection tasks.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Imports: R6, future, future.apply, stats, graphics
+RoxygenNote: 7.3.3
+NeedsCompilation: no
