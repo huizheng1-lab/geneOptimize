@@ -3,7 +3,7 @@ Type: Package
 Title: An Object-Oriented Framework for Genetic Algorithms and Variable Selection in R
 Version: 1.0.0
 Author: Hui Zheng [aut, cre]
-Maintainer: Hui Zheng <i8who@yahoo.com>
+Maintainer: Hui Zheng <huizheng1@gmail.com>
 Description: An R6-based framework for genetic and memetic algorithms. Supports binary and real-valued encodings, modular operators, parallel fitness evaluation via 'future', and hybridization with local search.
 License: MIT + file LICENSE
 Encoding: UTF-8
