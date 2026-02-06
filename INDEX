@@ -1,0 +1,17 @@
+Chromosome              Chromosome Class
+CrossoverOperator       Crossover Operator Base Class
+CrossoverSinglePoint    Single Point Crossover
+CrossoverUniform        Uniform Crossover
+GeneticAlgorithm        GeneticAlgorithm Engine
+MutationOperator        Mutation Operator Base Class
+MutationSimple          Simple Mutation
+Population              Population Class
+SelectionOperator       Selection Operator Base Class
+SelectionTournament     Tournament Selection
+crossover_single_point
+                        GA Crossover Operators
+mutation_binary         GA Mutation Operators
+new_gene_opt_res        S3 Class for GeneOptimize Results
+run_ga                  Genetic Algorithm Engine (Object-Oriented &
+                        Modular)
+selection_tournament    GA Selection Operators
