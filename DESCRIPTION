@@ -1,12 +1,23 @@
 Package: geneOptimize
 Type: Package
-Title: Flexible Genetic Algorithms for Variable Selection
-Version: 0.1.1
-Author: Hui [aut, cre]
-Maintainer: Hui <hui@example.com>
-Description: A modular and object-oriented framework for running genetic algorithms and memetic algorithms, with support for custom operators and variable selection tasks.
+Title: An Object-Oriented Framework for Genetic Algorithms and Variable Selection in R
+Version: 1.0.0
+Author: Hui Zheng [aut, cre]
+Maintainer: Hui Zheng <i8who@yahoo.com>
+Description: An R6-based framework for genetic and memetic algorithms. Supports binary and real-valued encodings, modular operators, parallel fitness evaluation via 'future', and hybridization with local search.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Imports: R6, future, future.apply, stats, graphics
+LazyData: true
 RoxygenNote: 7.3.3
+Imports: 
+    R6,
+    future,
+    future.apply,
+    stats,
+    graphics
+Suggests: 
+    tidymodels,
+    testthat (>= 3.0.0)
+URL: https://github.com/huizheng1-lab/geneOptimize
+BugReports: https://github.com/huizheng1-lab/geneOptimize/issues
 NeedsCompilation: no
