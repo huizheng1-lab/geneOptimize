@@ -7,7 +7,7 @@
 R6 class for Gaussian mutation.
 }
 \section{Super class}{
-\code{geneOptimize::MutationOperator} -> \code{MutationGaussian}
+\code{\link[geneOptimize:MutationOperator]{geneOptimize::MutationOperator}} -> \code{MutationGaussian}
 }
 \section{Methods}{
 \subsection{Public methods}{

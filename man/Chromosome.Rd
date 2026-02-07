@@ -21,6 +21,7 @@ An abstract R6 class representing a chromosome.
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-Chromosome-new}{\code{Chromosome$new()}}
+\item \href{#method-Chromosome-mutate}{\code{Chromosome$mutate()}}
 \item \href{#method-Chromosome-copy}{\code{Chromosome$copy()}}
 \item \href{#method-Chromosome-clone}{\code{Chromosome$clone()}}
 }
@@ -31,6 +32,15 @@ An abstract R6 class representing a chromosome.
 \subsection{Method \code{new()}}{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Chromosome$new(genes, type = "binary")}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Chromosome-mutate"></a>}}
+\if{latex}{\out{\hypertarget{method-Chromosome-mutate}{}}}
+\subsection{Method \code{mutate()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Chromosome$mutate(mutation_rate, ...)}\if{html}{\out{</div>}}
 }
 
 }

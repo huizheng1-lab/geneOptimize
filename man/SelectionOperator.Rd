@@ -17,10 +17,20 @@ Base R6 class for selection.
 \if{html}{\out{<a id="method-SelectionOperator-select"></a>}}
 \if{latex}{\out{\hypertarget{method-SelectionOperator-select}{}}}
 \subsection{Method \code{select()}}{
+Select individuals.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SelectionOperator$select(pop, n)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{pop}}{Population matrix.}
+
+\item{\code{n}}{Number to select.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-SelectionOperator-clone"></a>}}

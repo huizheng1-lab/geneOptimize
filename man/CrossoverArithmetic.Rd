@@ -7,7 +7,7 @@
 R6 class for arithmetic (real-valued) crossover.
 }
 \section{Super class}{
-\code{geneOptimize::CrossoverOperator} -> \code{CrossoverArithmetic}
+\code{\link[geneOptimize:CrossoverOperator]{geneOptimize::CrossoverOperator}} -> \code{CrossoverArithmetic}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}

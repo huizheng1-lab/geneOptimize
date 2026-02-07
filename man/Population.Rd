@@ -28,28 +28,56 @@ R6 class managing a collection of Chromosome objects.
 \if{html}{\out{<a id="method-Population-new"></a>}}
 \if{latex}{\out{\hypertarget{method-Population-new}{}}}
 \subsection{Method \code{new()}}{
+Initialize a population.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Population$new(size, n_genes, type = "binary", ...)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{size}}{Population size.}
+
+\item{\code{n_genes}}{Number of genes per chromosome.}
+
+\item{\code{type}}{Encoding type ("binary" or "real").}
+
+\item{\code{...}}{Additional arguments for initialization.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Population-evaluate"></a>}}
 \if{latex}{\out{\hypertarget{method-Population-evaluate}{}}}
 \subsection{Method \code{evaluate()}}{
+Evaluate fitness for all individuals.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Population$evaluate(fitness_fn, parallel = FALSE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{fitness_fn}}{The fitness function to apply.}
+
+\item{\code{parallel}}{Logical; if TRUE, evaluation is parallelized.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Population-get_best"></a>}}
 \if{latex}{\out{\hypertarget{method-Population-get_best}{}}}
 \subsection{Method \code{get_best()}}{
+Get the best individual in the population.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Population$get_best()}\if{html}{\out{</div>}}
 }
 
+\subsection{Returns}{
+The Chromosome object with the highest fitness.
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Population-clone"></a>}}

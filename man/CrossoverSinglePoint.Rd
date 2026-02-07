@@ -7,7 +7,7 @@
 R6 class for single-point crossover.
 }
 \section{Super class}{
-\code{geneOptimize::CrossoverOperator} -> \code{CrossoverSinglePoint}
+\code{\link[geneOptimize:CrossoverOperator]{geneOptimize::CrossoverOperator}} -> \code{CrossoverSinglePoint}
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -20,10 +20,20 @@ R6 class for single-point crossover.
 \if{html}{\out{<a id="method-CrossoverSinglePoint-mate"></a>}}
 \if{latex}{\out{\hypertarget{method-CrossoverSinglePoint-mate}{}}}
 \subsection{Method \code{mate()}}{
+Mate two parents.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{CrossoverSinglePoint$mate(p1, p2)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{p1}}{Parent 1.}
+
+\item{\code{p2}}{Parent 2.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CrossoverSinglePoint-clone"></a>}}

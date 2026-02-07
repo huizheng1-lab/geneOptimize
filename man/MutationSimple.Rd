@@ -7,7 +7,7 @@
 R6 class for standard mutation.
 }
 \section{Super class}{
-\code{geneOptimize::MutationOperator} -> \code{MutationSimple}
+\code{\link[geneOptimize:MutationOperator]{geneOptimize::MutationOperator}} -> \code{MutationSimple}
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -20,10 +20,22 @@ R6 class for standard mutation.
 \if{html}{\out{<a id="method-MutationSimple-mutate"></a>}}
 \if{latex}{\out{\hypertarget{method-MutationSimple-mutate}{}}}
 \subsection{Method \code{mutate()}}{
+Mutate genes.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{MutationSimple$mutate(genes, type, rate)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{genes}}{Gene vector.}
+
+\item{\code{type}}{Type.}
+
+\item{\code{rate}}{Rate.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-MutationSimple-clone"></a>}}

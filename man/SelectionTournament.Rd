@@ -28,19 +28,37 @@ R6 class for tournament selection.
 \if{html}{\out{<a id="method-SelectionTournament-new"></a>}}
 \if{latex}{\out{\hypertarget{method-SelectionTournament-new}{}}}
 \subsection{Method \code{new()}}{
+Initialize.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SelectionTournament$new(k = 2)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{k}}{Tournament size (default 2).}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-SelectionTournament-select"></a>}}
 \if{latex}{\out{\hypertarget{method-SelectionTournament-select}{}}}
 \subsection{Method \code{select()}}{
+Select.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SelectionTournament$select(pop, n)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{pop}}{Population.}
+
+\item{\code{n}}{Number.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-SelectionTournament-clone"></a>}}

@@ -1,3 +1,7 @@
+#' Single-point crossover for vectors
+#' @param parent1 First parent vector.
+#' @param parent2 Second parent vector.
+#' @return A list of two offspring vectors.
 #' @export
 crossover_single_point <- function(parent1, parent2) {
   n_genes <- length(parent1)
@@ -7,6 +11,10 @@ crossover_single_point <- function(parent1, parent2) {
   return(list(child1, child2))
 }
 
+#' Uniform crossover for vectors
+#' @param parent1 First parent vector.
+#' @param parent2 Second parent vector.
+#' @return A list of two offspring vectors.
 #' @export
 crossover_uniform <- function(parent1, parent2) {
   n_genes <- length(parent1)
@@ -88,6 +96,11 @@ CrossoverArithmetic <- R6::R6Class(
   )
 )
 
+#' Binary mutation (bit-flip)
+#' @param chromosome Binary vector.
+#' @param mutation_rate Probability of flipping each bit.
+#' @param ... Additional arguments.
+#' @return Mutated binary vector.
 #' @export
 mutation_binary <- function(chromosome, mutation_rate, ...) {
   n_genes <- length(chromosome)
@@ -96,6 +109,13 @@ mutation_binary <- function(chromosome, mutation_rate, ...) {
   return(chromosome)
 }
 
+#' Real-valued mutation (Gaussian)
+#' @param chromosome Numeric vector.
+#' @param mutation_rate Probability of mutating each gene.
+#' @param lower Lower bound.
+#' @param upper Upper bound.
+#' @param ... Additional arguments.
+#' @return Mutated numeric vector.
 #' @export
 mutation_real <- function(chromosome, mutation_rate, lower, upper, ...) {
   n_genes <- length(chromosome)
@@ -199,6 +219,11 @@ SelectionTournament <- R6::R6Class(
   )
 )
 
+#' Roulette wheel selection
+#' @param population Population matrix.
+#' @param fitness_values Vector of fitness values.
+#' @param ... Additional arguments.
+#' @return Selected individual vector.
 #' @export
 selection_roulette <- function(population, fitness_values, ...) {
   pop_size <- nrow(population)
@@ -209,6 +234,12 @@ selection_roulette <- function(population, fitness_values, ...) {
   return(population[idx, ])
 }
 
+#' Tournament selection
+#' @param population Population matrix.
+#' @param fitness_values Vector of fitness values.
+#' @param k Tournament size (default 3).
+#' @param ... Additional arguments.
+#' @return Selected individual vector.
 #' @export
 selection_tournament <- function(population, fitness_values, k = 3, ...) {
   pop_size <- nrow(population)

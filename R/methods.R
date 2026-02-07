@@ -1,3 +1,19 @@
+#' Constructor for GA result object
+#' @param best_chromosome Best chromosome found.
+#' @param best_fitness Best fitness value.
+#' @param history Fitness history.
+#' @param call Original function call.
+#' @return An object of class \code{gene_opt_res}.
+#' @export
+new_gene_opt_res <- function(best_chromosome, best_fitness, history, call) {
+  structure(list(
+    best_chromosome = best_chromosome,
+    best_fitness = best_fitness,
+    history = history,
+    call = call
+  ), class = "gene_opt_res")
+}
+
 #' @export
 print.gene_opt_res <- function(x, ...) {
   cat("\n=== Genetic Algorithm Optimization Result ===\n")

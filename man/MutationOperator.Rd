@@ -17,10 +17,22 @@ Base R6 class for mutation operators.
 \if{html}{\out{<a id="method-MutationOperator-mutate"></a>}}
 \if{latex}{\out{\hypertarget{method-MutationOperator-mutate}{}}}
 \subsection{Method \code{mutate()}}{
+Mutate genes.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{MutationOperator$mutate(genes, type, rate)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{genes}}{Gene vector.}
+
+\item{\code{type}}{Type.}
+
+\item{\code{rate}}{Rate.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-MutationOperator-clone"></a>}}

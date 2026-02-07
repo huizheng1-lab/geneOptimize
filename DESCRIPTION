@@ -5,7 +5,7 @@ Version: 1.0.0
 Author: Hui Zheng [aut, cre]
 Maintainer: Hui Zheng <huizheng1@gmail.com>
 Description: An R6-based framework for genetic and memetic algorithms. Supports binary and real-valued encodings, modular operators, parallel fitness evaluation via 'future', and hybridization with local search.
-License: MIT + file LICENSE
+License: MIT
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.3
