@@ -19,15 +19,19 @@ Base R6 class for selection.
 \subsection{Method \code{select()}}{
 Select individuals.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SelectionOperator$select(pop, n)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SelectionOperator$select(population, fitness_values, n = 1, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{pop}}{Population matrix.}
+\item{\code{population}}{Population matrix.}
+
+\item{\code{fitness_values}}{Vector of fitness values.}
 
 \item{\code{n}}{Number to select.}
+
+\item{\code{...}}{Additional arguments.}
 }
 \if{html}{\out{</div>}}
 }

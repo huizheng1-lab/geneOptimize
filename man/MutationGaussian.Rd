@@ -22,7 +22,7 @@ R6 class for Gaussian mutation.
 \subsection{Method \code{mutate()}}{
 Mutate genes.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MutationGaussian$mutate(genes, rate, sigma, lower, upper)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MutationGaussian$mutate(genes, rate, sigma, lower, upper, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -37,6 +37,8 @@ Mutate genes.
 \item{\code{lower}}{Lower bound.}
 
 \item{\code{upper}}{Upper bound.}
+
+\item{\code{...}}{Additional arguments.}
 }
 \if{html}{\out{</div>}}
 }

@@ -19,7 +19,7 @@ Base R6 class for mutation operators.
 \subsection{Method \code{mutate()}}{
 Mutate genes.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MutationOperator$mutate(genes, type, rate)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MutationOperator$mutate(genes, type, rate, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -27,9 +27,11 @@ Mutate genes.
 \describe{
 \item{\code{genes}}{Gene vector.}
 
-\item{\code{type}}{Type.}
+\item{\code{type}}{Encoding type.}
 
-\item{\code{rate}}{Rate.}
+\item{\code{rate}}{Mutation rate.}
+
+\item{\code{...}}{Additional arguments.}
 }
 \if{html}{\out{</div>}}
 }

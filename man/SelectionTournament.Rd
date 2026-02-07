@@ -30,13 +30,13 @@ R6 class for tournament selection.
 \subsection{Method \code{new()}}{
 Initialize.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SelectionTournament$new(k = 2)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SelectionTournament$new(k = 3)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{k}}{Tournament size (default 2).}
+\item{\code{k}}{Tournament size (default 3).}
 }
 \if{html}{\out{</div>}}
 }
@@ -45,17 +45,21 @@ Initialize.
 \if{html}{\out{<a id="method-SelectionTournament-select"></a>}}
 \if{latex}{\out{\hypertarget{method-SelectionTournament-select}{}}}
 \subsection{Method \code{select()}}{
-Select.
+Select an individual.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SelectionTournament$select(pop, n)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SelectionTournament$select(population, fitness_values, n = 1, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{pop}}{Population.}
+\item{\code{population}}{Population matrix.}
 
-\item{\code{n}}{Number.}
+\item{\code{fitness_values}}{Fitness values.}
+
+\item{\code{n}}{Number (ignored for single selection).}
+
+\item{\code{...}}{Additional arguments.}
 }
 \if{html}{\out{</div>}}
 }

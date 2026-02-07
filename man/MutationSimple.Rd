@@ -4,7 +4,7 @@
 \alias{MutationSimple}
 \title{Simple Mutation Class}
 \description{
-R6 class for standard mutation.
+R6 class for standard mutation (Binary bit-flip or Real noise).
 }
 \section{Super class}{
 \code{\link[geneOptimize:MutationOperator]{geneOptimize::MutationOperator}} -> \code{MutationSimple}
@@ -22,7 +22,7 @@ R6 class for standard mutation.
 \subsection{Method \code{mutate()}}{
 Mutate genes.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MutationSimple$mutate(genes, type, rate)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MutationSimple$mutate(genes, type, rate, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -33,6 +33,8 @@ Mutate genes.
 \item{\code{type}}{Type.}
 
 \item{\code{rate}}{Rate.}
+
+\item{\code{...}}{Additional arguments.}
 }
 \if{html}{\out{</div>}}
 }

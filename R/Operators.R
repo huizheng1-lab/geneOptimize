@@ -1,29 +1,3 @@
-#' Single-point crossover for vectors
-#' @param parent1 First parent vector.
-#' @param parent2 Second parent vector.
-#' @return A list of two offspring vectors.
-#' @export
-crossover_single_point <- function(parent1, parent2) {
-  n_genes <- length(parent1)
-  point <- sample(1:(n_genes - 1), 1)
-  child1 <- c(parent1[1:point], parent2[(point + 1):n_genes])
-  child2 <- c(parent2[1:point], parent1[(point + 1):n_genes])
-  return(list(child1, child2))
-}
-
-#' Uniform crossover for vectors
-#' @param parent1 First parent vector.
-#' @param parent2 Second parent vector.
-#' @return A list of two offspring vectors.
-#' @export
-crossover_uniform <- function(parent1, parent2) {
-  n_genes <- length(parent1)
-  mask <- sample(c(0, 1), n_genes, replace = TRUE)
-  child1 <- ifelse(mask == 1, parent1, parent2)
-  child2 <- ifelse(mask == 1, parent2, parent1)
-  return(list(child1, child2))
-}
-
 #' Crossover Operator Base Class
 #' @description Base R6 class for crossover operators.
 #' @export
@@ -50,7 +24,11 @@ CrossoverSinglePoint <- R6::R6Class(
     #' @param p1 Parent 1.
     #' @param p2 Parent 2.
     mate = function(p1, p2) {
-      crossover_single_point(p1, p2)
+      n_genes <- length(p1)
+      point <- sample(1:(n_genes - 1), 1)
+      child1 <- c(p1[1:point], p2[(point + 1):n_genes])
+      child2 <- c(p2[1:point], p1[(point + 1):n_genes])
+      return(list(child1, child2))
     }
   )
 )
@@ -66,7 +44,11 @@ CrossoverUniform <- R6::R6Class(
     #' @param p1 Parent 1.
     #' @param p2 Parent 2.
     mate = function(p1, p2) {
-      crossover_uniform(p1, p2)
+      n_genes <- length(p1)
+      mask <- sample(c(0, 1), n_genes, replace = TRUE)
+      child1 <- ifelse(mask == 1, p1, p2)
+      child2 <- ifelse(mask == 1, p2, p1)
+      return(list(child1, child2))
     }
   )
 )
@@ -96,35 +78,6 @@ CrossoverArithmetic <- R6::R6Class(
   )
 )
 
-#' Binary mutation (bit-flip)
-#' @param chromosome Binary vector.
-#' @param mutation_rate Probability of flipping each bit.
-#' @param ... Additional arguments.
-#' @return Mutated binary vector.
-#' @export
-mutation_binary <- function(chromosome, mutation_rate, ...) {
-  n_genes <- length(chromosome)
-  mask <- stats::runif(n_genes) < mutation_rate
-  chromosome[mask] <- 1 - chromosome[mask]
-  return(chromosome)
-}
-
-#' Real-valued mutation (Gaussian)
-#' @param chromosome Numeric vector.
-#' @param mutation_rate Probability of mutating each gene.
-#' @param lower Lower bound.
-#' @param upper Upper bound.
-#' @param ... Additional arguments.
-#' @return Mutated numeric vector.
-#' @export
-mutation_real <- function(chromosome, mutation_rate, lower, upper, ...) {
-  n_genes <- length(chromosome)
-  mask <- stats::runif(n_genes) < mutation_rate
-  noise <- stats::rnorm(sum(mask), mean = 0, sd = (upper - lower) / 10)
-  chromosome[mask] <- chromosome[mask] + noise
-  return(pmax(pmin(chromosome, upper), lower))
-}
-
 #' Mutation Operator Base Class
 #' @description Base R6 class for mutation operators.
 #' @export
@@ -133,16 +86,17 @@ MutationOperator <- R6::R6Class(
   public = list(
     #' @description Mutate genes.
     #' @param genes Gene vector.
-    #' @param type Type.
-    #' @param rate Rate.
-    mutate = function(genes, type, rate) {
+    #' @param type Encoding type.
+    #' @param rate Mutation rate.
+    #' @param ... Additional arguments.
+    mutate = function(genes, type, rate, ...) {
       stop("Not implemented")
     }
   )
 )
 
 #' Simple Mutation Class
-#' @description R6 class for standard mutation.
+#' @description R6 class for standard mutation (Binary bit-flip or Real noise).
 #' @export
 MutationSimple <- R6::R6Class(
   "MutationSimple",
@@ -152,9 +106,21 @@ MutationSimple <- R6::R6Class(
     #' @param genes Gene vector.
     #' @param type Type.
     #' @param rate Rate.
-    mutate = function(genes, type, rate) {
-      if (type == "binary") mutation_binary(genes, rate)
-      else mutation_real(genes, rate)
+    #' @param ... Additional arguments.
+    mutate = function(genes, type, rate, ...) {
+      if (type == "binary") {
+        n_genes <- length(genes)
+        mask <- stats::runif(n_genes) < rate
+        genes[mask] <- 1 - genes[mask]
+        return(genes)
+      } else {
+        args <- list(...)
+        n_genes <- length(genes)
+        mask <- stats::runif(n_genes) < rate
+        noise <- stats::rnorm(sum(mask), mean = 0, sd = (args$upper - args$lower) / 10)
+        genes[mask] <- genes[mask] + noise
+        return(pmax(pmin(genes, args$upper), args$lower))
+      }
     }
   )
 )
@@ -172,7 +138,8 @@ MutationGaussian <- R6::R6Class(
     #' @param sigma Sigma.
     #' @param lower Lower bound.
     #' @param upper Upper bound.
-    mutate = function(genes, rate, sigma, lower, upper) {
+    #' @param ... Additional arguments.
+    mutate = function(genes, rate, sigma, lower, upper, ...) {
        mask <- stats::runif(length(genes)) < rate
        noise <- stats::rnorm(sum(mask), mean = 0, sd = sigma)
        genes[mask] <- genes[mask] + noise
@@ -188,9 +155,11 @@ SelectionOperator <- R6::R6Class(
   "SelectionOperator",
   public = list(
     #' @description Select individuals.
-    #' @param pop Population matrix.
+    #' @param population Population matrix.
+    #' @param fitness_values Vector of fitness values.
     #' @param n Number to select.
-    select = function(pop, n) {
+    #' @param ... Additional arguments.
+    select = function(population, fitness_values, n = 1, ...) {
       stop("Not implemented")
     }
   )
@@ -204,46 +173,45 @@ SelectionTournament <- R6::R6Class(
   "SelectionTournament",
   inherit = SelectionOperator,
   public = list(
-    k = 2,
+    k = 3,
     #' @description Initialize.
-    #' @param k Tournament size (default 2).
-    initialize = function(k = 2) {
+    #' @param k Tournament size (default 3).
+    initialize = function(k = 3) {
       self$k <- k
     },
-    #' @description Select.
-    #' @param pop Population.
-    #' @param n Number.
-    select = function(pop, n) {
-      # Logic
+    #' @description Select an individual.
+    #' @param population Population matrix.
+    #' @param fitness_values Fitness values.
+    #' @param n Number (ignored for single selection).
+    #' @param ... Additional arguments.
+    select = function(population, fitness_values, n = 1, ...) {
+      pop_size <- nrow(population)
+      indices <- sample(1:pop_size, self$k)
+      winner <- indices[which.max(fitness_values[indices])]
+      return(population[winner, ])
     }
   )
 )
 
-#' Roulette wheel selection
-#' @param population Population matrix.
-#' @param fitness_values Vector of fitness values.
-#' @param ... Additional arguments.
-#' @return Selected individual vector.
+#' Roulette Selection Class
+#' @description R6 class for roulette wheel selection.
 #' @export
-selection_roulette <- function(population, fitness_values, ...) {
-  pop_size <- nrow(population)
-  min_fit <- min(fitness_values)
-  adj_fitness <- if (min_fit < 0) fitness_values - min_fit + 0.01 else fitness_values
-  probs <- adj_fitness / sum(adj_fitness)
-  idx <- sample(1:pop_size, 1, prob = probs)
-  return(population[idx, ])
-}
-
-#' Tournament selection
-#' @param population Population matrix.
-#' @param fitness_values Vector of fitness values.
-#' @param k Tournament size (default 3).
-#' @param ... Additional arguments.
-#' @return Selected individual vector.
-#' @export
-selection_tournament <- function(population, fitness_values, k = 3, ...) {
-  pop_size <- nrow(population)
-  indices <- sample(1:pop_size, k)
-  winner <- indices[which.max(fitness_values[indices])]
-  return(population[winner, ])
-}
+SelectionRoulette <- R6::R6Class(
+  "SelectionRoulette",
+  inherit = SelectionOperator,
+  public = list(
+    #' @description Select an individual.
+    #' @param population Population matrix.
+    #' @param fitness_values Fitness values.
+    #' @param n Number.
+    #' @param ... Additional arguments.
+    select = function(population, fitness_values, n = 1, ...) {
+      pop_size <- nrow(population)
+      min_fit <- min(fitness_values)
+      adj_fitness <- if (min_fit < 0) fitness_values - min_fit + 0.01 else fitness_values
+      probs <- adj_fitness / sum(adj_fitness)
+      idx <- sample(1:pop_size, 1, prob = probs)
+      return(population[idx, ])
+    }
+  )
+)

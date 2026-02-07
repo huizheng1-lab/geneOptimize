@@ -9,9 +9,9 @@ run_ga(
   n_genes,
   pop_size = 50,
   generations = 100,
-  selection_fn = selection_tournament,
-  crossover_fn = crossover_single_point,
-  mutation_fn = mutation_binary,
+  selection_fn = SelectionTournament$new(),
+  crossover_fn = CrossoverSinglePoint$new(),
+  mutation_fn = MutationSimple$new(),
   crossover_rate = 0.8,
   mutation_rate = 0.01,
   type = "binary",
@@ -31,11 +31,11 @@ run_ga(
 
 \item{generations}{Generations.}
 
-\item{selection_fn}{Selection function.}
+\item{selection_fn}{Selection operator object (R6).}
 
-\item{crossover_fn}{Crossover function.}
+\item{crossover_fn}{Crossover operator object (R6).}
 
-\item{mutation_fn}{Mutation function.}
+\item{mutation_fn}{Mutation operator object (R6).}
 
 \item{crossover_rate}{Crossover rate.}
 
@@ -54,8 +54,8 @@ run_ga(
 \item{...}{Additional arguments.}
 }
 \value{
-Result object.
+Result object of class \code{gene_opt_res}.
 }
 \description{
-Functional interface for Genetic Algorithm
+A high-level wrapper to run the Genetic Algorithm.
 }
