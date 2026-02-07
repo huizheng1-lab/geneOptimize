@@ -19,6 +19,7 @@ run_ga(
   verbose = TRUE,
   parallel = FALSE,
   cores = 1,
+  local_search_fn = NULL,
   ...
 )
 }
@@ -50,6 +51,8 @@ run_ga(
 \item{parallel}{Parallel execution.}
 
 \item{cores}{Number of cores.}
+
+\item{local_search_fn}{Optional local search function for Memetic Algorithms.}
 
 \item{...}{Additional arguments.}
 }

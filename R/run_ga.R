@@ -14,6 +14,7 @@
 #' @param verbose Verbose output.
 #' @param parallel Parallel execution.
 #' @param cores Number of cores.
+#' @param local_search_fn Optional local search function for Memetic Algorithms.
 #' @param ... Additional arguments.
 #' @return Result object of class \code{gene_opt_res}.
 #' @export
@@ -23,7 +24,7 @@ run_ga <- function(fitness_fn, n_genes, pop_size = 50, generations = 100,
                   mutation_fn = MutationSimple$new(), 
                   crossover_rate = 0.8, mutation_rate = 0.01, 
                   type = "binary", elitism_count = 1, verbose = TRUE, parallel = FALSE, 
-                  cores = 1, ...) {
+                  cores = 1, local_search_fn = NULL, ...) {
   
   if (type == "binary") {
     population <- matrix(sample(c(0, 1), pop_size * n_genes, replace = TRUE), nrow = pop_size)
@@ -79,6 +80,13 @@ run_ga <- function(fitness_fn, n_genes, pop_size = 50, generations = 100,
     # Mutation
     for (i in 1:pop_size) {
       new_pop[i, ] <- mutation_fn$mutate(new_pop[i, ], type, mutation_rate, ...)
+    }
+    
+    # Local Search (Memetic Hybridization)
+    if (!is.null(local_search_fn)) {
+      for (i in 1:pop_size) {
+        new_pop[i, ] <- local_search_fn(new_pop[i, ])
+      }
     }
     
     # Replacement with Elites
