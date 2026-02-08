@@ -24,7 +24,8 @@ run_ga <- function(fitness_fn, n_genes, pop_size = 50, generations = 100,
                   mutation_fn = MutationSimple$new(), 
                   crossover_rate = 0.8, mutation_rate = 0.01, 
                   type = "binary", elitism_count = 1, verbose = TRUE, parallel = FALSE, 
-                  cores = 1, local_search_fn = NULL, ...) {
+                  cores = 1, local_search_fn = NULL, 
+                  track_diversity = FALSE, ...) {
   
   if (type == "binary") {
     population <- matrix(sample(c(0, 1), pop_size * n_genes, replace = TRUE), nrow = pop_size)
@@ -34,6 +35,9 @@ run_ga <- function(fitness_fn, n_genes, pop_size = 50, generations = 100,
   }
   
   best_history <- numeric(generations)
+  mean_history <- numeric(generations)
+  worst_history <- numeric(generations)
+  diversity_history <- numeric(generations)
   
   for (gen in 1:generations) {
     # Fitness Evaluation
@@ -53,9 +57,31 @@ run_ga <- function(fitness_fn, n_genes, pop_size = 50, generations = 100,
     best_idx <- which.max(fitness_values)
     current_best_fitness <- fitness_values[best_idx]
     best_history[gen] <- current_best_fitness
+    mean_history[gen] <- mean(fitness_values)
+    worst_history[gen] <- min(fitness_values)
+    
+    # Track diversity (for binary: Hamming distance; for real: Euclidean)
+    if (track_diversity && gen > 1) {
+      if (type == "binary") {
+        # Hamming distance based diversity
+        div_matrix <- outer(1:pop_size, 1:pop_size, Vectorize(function(i, j) {
+          sum(population[i, ] != population[j, ])
+        }))
+        diversity_history[gen] <- mean(div_matrix[lower.tri(div_matrix)])
+      } else {
+        # Euclidean distance based diversity
+        center <- colMeans(population)
+        div_matrix <- outer(1:pop_size, 1:pop_size, Vectorize(function(i, j) {
+          sqrt(sum((population[i, ] - population[j, ])^2))
+        }))
+        diversity_history[gen] <- mean(div_matrix[lower.tri(div_matrix)])
+      }
+    } else if (track_diversity) {
+      diversity_history[gen] <- 0
+    }
     
     if (verbose) {
-      cat(sprintf("Gen %d: Best = %f\n", gen, current_best_fitness))
+      cat(sprintf("Gen %d: Best = %f, Mean = %f\n", gen, current_best_fitness, mean_history[gen]))
     }
     
     # Elitism
@@ -103,5 +129,13 @@ run_ga <- function(fitness_fn, n_genes, pop_size = 50, generations = 100,
     history = best_history,
     call = match.call()
   )
+  
+  # Add extended statistics
+  res$mean_history <- mean_history
+  res$worst_history <- worst_history
+  if (track_diversity) {
+    res$diversity_history <- diversity_history
+  }
+  
   return(res)
 }
