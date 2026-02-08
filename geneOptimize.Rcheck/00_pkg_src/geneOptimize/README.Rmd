@@ -1,0 +1,276 @@
+# geneOptimize
+
+[![R-CMD-check](https://github.com/huizheng1-lab/geneOptimize/workflows/R-CMD-check/badge.svg)](https://github.com/huizheng1-lab/geneOptimize/actions)
+[![CRAN status](https://www.r-pkg.org/badges/version/geneOptimize)](https://CRAN.R-project.org/package=geneOptimize)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Overview
+
+`geneOptimize` is an R package that provides an **object-oriented framework for genetic algorithms and memetic algorithms** with a focus on **variable selection** for statistical modeling. Built on R6 classes, it offers a modular and extensible design for optimization problems.
+
+## Installation
+
+```r
+# Install from GitHub
+devtools::install_github("huizheng1-lab/geneOptimize")
+
+# Or install from CRAN (when available)
+install.packages("geneOptimize")
+```
+
+## Quick Start
+
+```r
+library(geneOptimize)
+
+# Define a simple fitness function (maximize a function)
+fitness_fn <- function(chromosome) {
+  x <- chromosome[1]
+  y <- chromosome[2]
+  # Rosenbrock function (maximum at c(1, 1))
+  return(100 - (1 - x)^2 - 100*(y - x^2)^2)
+}
+
+# Run genetic algorithm
+result <- run_ga(
+  fitness_fn = fitness_fn,
+  n_genes = 2,
+  pop_size = 50,
+  generations = 100,
+  type = "real",
+  lower = c(-2, -2),
+  upper = c(2, 2)
+)
+
+# Plot convergence
+plot_convergence(result)
+
+# Get best solution
+result$best_chromosome
+result$best_fitness
+```
+
+## Features
+
+### Core Components
+
+| Component | Description |
+|----------|-------------|
+| **Chromosome Classes** | `BinaryChromosome`, `RealChromosome`, `Chromosome` |
+| **Population Management** | `Population` class for population-level operations |
+| **Selection Operators** | Tournament selection, Roulette wheel selection |
+| **Crossover Operators** | Single-point, Uniform, Arithmetic crossover |
+| **Mutation Operators** | Simple mutation, Gaussian mutation |
+| **Genetic Algorithm** | `GeneticAlgorithm` class and `run_ga()` function |
+
+### Key Features
+
+- **R6-based OOP design** - Modern object-oriented programming in R
+- **Modular operators** - Easy to customize selection, crossover, and mutation
+- **Binary and real-valued encodings** - Support for different chromosome types
+- **Parallel processing** - Via the `future` package for large-scale optimization
+- **Memetic algorithm support** - Hybridization with local search
+- **Comprehensive plotting** - Convergence curves, diagnostics, comparisons
+
+## Usage Examples
+
+### Binary Encoding (Variable Selection)
+
+```r
+library(geneOptimize)
+library(MASS)  # For Boston dataset
+
+# Load data
+data(Boston)
+X <- as.matrix(Boston[, -14])  # Features
+y <- Boston[, 14]  # Target
+
+# Fitness function: Maximize R² with penalty for too many variables
+fitness_fn <- function(chromosome) {
+  selected <- which(chromosome == 1)
+  if (length(selected) == 0) return(-Inf)
+  
+  model <- lm(y ~ X[, selected])
+  r2 <- summary(model)$r.squared
+  penalty <- 0.01 * length(selected)  # Penalty for complexity
+  return(r2 - penalty)
+}
+
+# Run GA for variable selection
+result <- run_ga(
+  fitness_fn = fitness_fn,
+  n_genes = ncol(X),
+  pop_size = 100,
+  generations = 50,
+  type = "binary",
+  elitism_count = 2
+)
+
+# Selected variables
+selected_vars <- which(result$best_chromosome == 1)
+colnames(X)[selected_vars]
+```
+
+### Real-Valued Optimization
+
+```r
+# Sphere function (minimize)
+sphere_fn <- function(x) sum(x^2)
+
+result <- run_ga(
+  fitness_fn = sphere_fn,
+  n_genes = 10,
+  pop_size = 50,
+  generations = 200,
+  type = "real",
+  lower = rep(-5, 10),
+  upper = rep(5, 10)
+)
+```
+
+### Memetic Algorithm (with Local Search)
+
+```r
+# Hill climbing local search
+local_search <- function(chromosome) {
+  improved <- chromosome
+  for (i in 1:length(chromosome)) {
+    improved[i] <- improved[i] + rnorm(1, 0, 0.1)
+  }
+  return(improved)
+}
+
+result <- run_ga(
+  fitness_fn = fitness_fn,
+  n_genes = 10,
+  generations = 100,
+  local_search_fn = local_search
+)
+```
+
+### Parallel Processing
+
+```r
+# Use multiple cores for fitness evaluation
+result <- run_ga(
+  fitness_fn = expensive_fitness_fn,
+  n_genes = 50,
+  pop_size = 100,
+  generations = 50,
+  parallel = TRUE,
+  cores = 4
+)
+```
+
+## Plotting Functions
+
+The package includes comprehensive plotting functions for analyzing GA results:
+
+```r
+# Convergence curve
+plot_convergence(result)
+
+# Fitness statistics (best, mean, worst)
+plot_fitness_stats(result)
+
+# Population diversity over generations
+plot_diversity(result)
+
+# Comprehensive 4-panel diagnostics
+plot_diagnostics(result)
+
+# Compare multiple runs
+plot_compare(run1, run2, run3)
+
+# Detailed summary
+summary(result)
+```
+
+## Advanced Usage
+
+### Custom Operators
+
+Create custom operators by extending R6 classes:
+
+```r
+# Custom selection operator
+MySelection <- R6::R6Class(
+  "MySelection",
+  inherit = SelectionOperator,
+  public = list(
+    select = function(population, fitness, ...) {
+      # Custom selection logic
+      sample(nrow(population), size = nrow(population), 
+             prob = fitness / sum(fitness))
+    }
+  )
+)
+
+# Use custom operator
+selection_fn <- MySelection$new()
+result <- run_ga(..., selection_fn = selection_fn)
+```
+
+### Hybrid with tidymodels
+
+```r
+library(tidymodels)
+
+# Use GA for hyperparameter tuning
+ga_tuning <- function(parameters) {
+  # Create model with parameters
+  model <- rand_forest(
+    trees = parameters[1],
+    mtry = parameters[2]
+  ) %>%
+    set_engine("ranger") %>%
+    fit(resamples$train)
+  
+  # Return negative RMSE (GA maximizes)
+  return(-rmse$mean)
+}
+```
+
+## Architecture
+
+```
+geneOptimize/
+├── R/
+│   ├── Algorithm.R       # GeneticAlgorithm R6 class
+│   ├── Chromosome.R     # Chromosome classes
+│   ├── Population.R     # Population management
+│   ├── Operators.R      # Selection, crossover, mutation operators
+│   ├── run_ga.R        # Main GA runner function
+│   ├── methods.R        # S3 methods (print, plot)
+│   └── plotting.R       # Plotting functions
+├── man/                 # Documentation (roxygen-generated)
+├── inst/
+│   └── tests/          # Unit tests
+└── DESCRIPTION         # Package metadata
+```
+
+## Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
+
+## License
+
+This package is distributed under the **MIT License**. See the LICENSE file for details.
+
+## Citation
+
+If you use geneOptimize in your research, please cite:
+
+```bibtex
+@Manual{zheng2024,
+  title = {geneOptimize: An Object-Oriented Framework for Genetic Algorithms and Variable Selection in R},
+  author = {Hui Zheng},
+  year = {2024},
+  url = {https://github.com/huizheng1-lab/geneOptimize}
+}
+```
+
+## References
+
+- Mitchell, M. (1998). An Introduction to Genetic Algorithms. MIT Press.
+- Goldberg, D. E. (1989). Genetic Algorithms in Search, Optimization, and Machine Learning. Addison-Wesley.

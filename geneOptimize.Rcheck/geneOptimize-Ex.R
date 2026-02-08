@@ -1,0 +1,173 @@
+pkgname <- "geneOptimize"
+source(file.path(R.home("share"), "R", "examples-header.R"))
+options(warn = 1)
+library('geneOptimize')
+
+base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
+base::assign(".old_wd", base::getwd(), pos = 'CheckExEnv')
+cleanEx()
+nameEx("example_auc_selection")
+### * example_auc_selection
+
+flush(stderr()); flush(stdout())
+
+### Name: example_auc_selection
+### Title: AUC-based Variable Selection with Sparsity Penalty
+### Aliases: example_auc_selection
+
+### ** Examples
+
+## Not run: 
+##D library(geneOptimize)
+##D library(yardstick)
+##D 
+##D # 1. Generate Synthetic Classification Data
+##D set.seed(42)
+##D n <- 200
+##D p <- 15
+##D X <- matrix(rnorm(n * p), n, p)
+##D colnames(X) <- paste0("V", 1:p)
+##D 
+##D # Only V1, V3, and V5 affect the outcome
+##D logits <- 1.5 * X[,1] - 1.2 * X[,3] + 0.8 * X[,5]
+##D probs <- 1 / (1 + exp(-logits))
+##D y <- as.factor(ifelse(runif(n) < probs, "Class1", "Class0"))
+##D df <- data.frame(y = y, X)
+##D 
+##D # 2. Define Penalized AUC Fitness Function
+##D fitness_sparse_auc <- function(genes, penalty = 0.01) {
+##D   num_selected <- sum(genes)
+##D   if (num_selected == 0) return(0)
+##D   
+##D   selected_vars <- colnames(X)[which(genes == 1)]
+##D   formula_str <- paste("y ~", paste(selected_vars, collapse = " + "))
+##D   
+##D   model_res <- tryCatch({
+##D     model <- glm(as.formula(formula_str), data = df, family = binomial)
+##D     preds <- predict(model, type = "response")
+##D     eval_df <- data.frame(truth = y, prob = preds)
+##D     roc_res <- yardstick::roc_auc(eval_df, truth = truth, prob, event_level = "second")
+##D     return(roc_res$.estimate - (penalty * num_selected))
+##D   }, error = function(e) return(0))
+##D }
+##D 
+##D # 3. Execute GA
+##D results <- run_ga(
+##D   fitness_fn = fitness_sparse_auc,
+##D   n_genes = p,
+##D   pop_size = 50,
+##D   generations = 40,
+##D   type = "binary",
+##D   penalty = 0.01
+##D )
+##D 
+##D # 4. Review Results
+##D print(results)
+##D print(colnames(X)[which(results$best_chromosome == 1)])
+## End(Not run)
+
+
+
+cleanEx()
+nameEx("example_memetic_algorithm")
+### * example_memetic_algorithm
+
+flush(stderr()); flush(stdout())
+
+### Name: example_memetic_algorithm
+### Title: Memetic Algorithm for Local Refinement
+### Aliases: example_memetic_algorithm
+
+### ** Examples
+
+## Not run: 
+##D library(geneOptimize)
+##D 
+##D # Define a simple fitness function
+##D fitness_fn <- function(x) -sum((x - 0.5)^2)
+##D 
+##D # Define a local search (hill climbing) operator
+##D local_search <- function(chromosome) {
+##D   # Simple perturbation logic for local refinement
+##D   refined <- chromosome + rnorm(length(chromosome), 0, 0.01)
+##D   if (fitness_fn(refined) > fitness_fn(chromosome)) {
+##D     return(refined)
+##D   }
+##D   return(chromosome)
+##D }
+##D 
+##D # Run GA with local search hybridization
+##D results <- run_ga(
+##D   fitness_fn = fitness_fn,
+##D   n_genes = 5,
+##D   pop_size = 30,
+##D   generations = 20,
+##D   type = "real",
+##D   lower = rep(0, 5),
+##D   upper = rep(1, 5),
+##D   local_search_fn = local_search # Injecting local refinement
+##D )
+##D 
+##D print(results)
+## End(Not run)
+
+
+
+cleanEx()
+nameEx("example_real_optimization")
+### * example_real_optimization
+
+flush(stderr()); flush(stdout())
+
+### Name: example_real_optimization
+### Title: Real-Valued Function Optimization
+### Aliases: example_real_optimization
+
+### ** Examples
+
+## Not run: 
+##D library(geneOptimize)
+##D 
+##D # 1. Define Ackley Function (Goal: Minimize, so return -Ackley)
+##D ackley <- function(x) {
+##D   d <- length(x)
+##D   a <- 20; b <- 0.2; c <- 2*pi
+##D   sum1 <- sum(x^2)
+##D   sum2 <- sum(cos(c*x))
+##D   term1 <- -a * exp(-b * sqrt(sum1/d))
+##D   term2 <- -exp(sum2/d)
+##D   return(-(term1 + term2 + a + exp(1)))
+##D }
+##D 
+##D # 2. Execute GA for Real-Valued Optimization
+##D results <- run_ga(
+##D   fitness_fn = ackley,
+##D   n_genes = 2,
+##D   pop_size = 50,
+##D   generations = 100,
+##D   type = "real",
+##D   lower = rep(-5, 2),
+##D   upper = rep(5, 2),
+##D   mutation_fn = MutationGaussian$new(),
+##D   crossover_fn = CrossoverArithmetic$new(alpha = 0.5)
+##D )
+##D 
+##D # 3. Review Results
+##D print(results)
+##D plot(results)
+## End(Not run)
+
+
+
+### * <FOOTER>
+###
+cleanEx()
+options(digits = 7L)
+base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
+grDevices::dev.off()
+###
+### Local variables: ***
+### mode: outline-minor ***
+### outline-regexp: "\\(> \\)?### [*]+" ***
+### End: ***
+quit('no')

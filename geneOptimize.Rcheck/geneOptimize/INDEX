@@ -1,0 +1,29 @@
+BinaryChromosome        Binary Chromosome Class
+Chromosome              Base Chromosome Class
+CrossoverArithmetic     Arithmetic Crossover Class
+CrossoverOperator       Crossover Operator Base Class
+CrossoverSinglePoint    Single-Point Crossover Class
+CrossoverUniform        Uniform Crossover Class
+GeneticAlgorithm        Genetic Algorithm Class
+MutationGaussian        Gaussian Mutation Class
+MutationOperator        Mutation Operator Base Class
+MutationSimple          Simple Mutation Class
+Population              Population Class
+RealChromosome          Real-Valued Chromosome Class
+SelectionOperator       Selection Operator Base Class
+SelectionRoulette       Roulette Selection Class
+SelectionTournament     Tournament Selection Class
+example_auc_selection   AUC-based Variable Selection with Sparsity
+                        Penalty
+example_memetic_algorithm
+                        Memetic Algorithm for Local Refinement
+example_real_optimization
+                        Real-Valued Function Optimization
+new_gene_opt_res        Constructor for GA result object
+plot_compare            Compare Multiple GA Runs
+plot_convergence        Plot Convergence Curve
+plot_diagnostics        Diagnostic Plot for GA Results
+plot_diversity          Plot Diversity Over Generations
+plot_fitness_stats      Plot Fitness Statistics
+run_ga                  Functional interface for Genetic Algorithm
+summary.gene_opt_res    Summary Method for GA Results
