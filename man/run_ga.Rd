@@ -55,6 +55,8 @@ run_ga(
 
 \item{local_search_fn}{Optional local search function for Memetic Algorithms.}
 
+\item{track_diversity}{Track population diversity over generations (default: FALSE).}
+
 \item{...}{Additional arguments.}
 }
 \value{

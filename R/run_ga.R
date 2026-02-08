@@ -15,6 +15,7 @@
 #' @param parallel Parallel execution.
 #' @param cores Number of cores.
 #' @param local_search_fn Optional local search function for Memetic Algorithms.
+#' @param track_diversity Track population diversity over generations (default: FALSE).
 #' @param ... Additional arguments.
 #' @return Result object of class \code{gene_opt_res}.
 #' @export
