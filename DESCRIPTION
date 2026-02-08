@@ -2,9 +2,15 @@ Package: geneOptimize
 Type: Package
 Title: An Object-Oriented Framework for Genetic Algorithms and Variable Selection in R
 Version: 1.0.0
-Author: Hui Zheng [aut, cre]
+Authors@R: c(
+    person("Hui", "Zheng", email = "huizheng1@gmail.com", role = c("aut", "cre"))
+  )
 Maintainer: Hui Zheng <huizheng1@gmail.com>
-Description: An R6-based framework for genetic and memetic algorithms. Supports binary and real-valued encodings, modular operators, parallel fitness evaluation via 'future', and hybridization with local search.
+Description: An R6-based framework for genetic and memetic algorithms.
+  Supports binary and real-valued encodings, modular operators,
+  parallel fitness evaluation via 'future', and hybridization with
+  local search. Designed for variable selection, hyperparameter
+  optimization, and general optimization problems.
 License: MIT
 Encoding: UTF-8
 LazyData: true
@@ -17,7 +23,10 @@ Imports:
     graphics
 Suggests: 
     tidymodels,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
 URL: https://github.com/huizheng1-lab/geneOptimize
 BugReports: https://github.com/huizheng1-lab/geneOptimize/issues
 NeedsCompilation: no

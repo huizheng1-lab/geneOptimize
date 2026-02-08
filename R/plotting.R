@@ -9,6 +9,7 @@
 #' @param ... Additional arguments for plot().
 #' @return NULL.
 #' @export
+#' @importFrom graphics plot lines grid
 plot_convergence <- function(x, col = "steelblue", lwd = 2, add = FALSE, ...) {
   if (!inherits(x, "gene_opt_res")) {
     stop("x must be a gene_opt_res object")
@@ -252,6 +253,7 @@ plot_compare <- function(..., labels = NULL, col = NULL, lwd = 2, legend_pos = "
 #' @param ... Additional arguments.
 #' @return NULL.
 #' @export
+#' @importFrom stats sd median
 summary.gene_opt_res <- function(object, ...) {
   cat("\n=== Genetic Algorithm Optimization Summary ===\n\n")
   
@@ -270,7 +272,7 @@ summary.gene_opt_res <- function(object, ...) {
   # Check for convergence
   if (length(object$history) > 10) {
     recent <- tail(object$history, 10)
-    improvement_rate <- sd(recent) / max(1, mean(recent))
+    improvement_rate <- stats::sd(recent) / max(1, mean(recent))
     cat("Convergence Analysis:\n")
     cat("  Recent Stability (CV):", round(improvement_rate * 100, 2), "%\n")
     cat("  Status:", if (improvement_rate < 0.001) "LIKELY CONVERGED" else "STILL IMPROVING", "\n")

@@ -20,6 +20,7 @@ run_ga(
   parallel = FALSE,
   cores = 1,
   local_search_fn = NULL,
+  track_diversity = FALSE,
   ...
 )
 }
