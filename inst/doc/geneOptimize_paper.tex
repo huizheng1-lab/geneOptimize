@@ -1,0 +1,846 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---- Packages ---------------------------------------------------------------
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{abstract}
+\usepackage{natbib}
+
+% ---- Hyperref setup ---------------------------------------------------------
+\hypersetup{
+  colorlinks = true,
+  linkcolor  = blue!70!black,
+  citecolor  = blue!70!black,
+  urlcolor   = blue!70!black,
+  pdftitle   = {geneOptimize: An Object-Oriented Framework for Genetic
+                Algorithms and Variable Selection in R},
+  pdfauthor  = {Hui Zheng}
+}
+
+% ---- Listings setup (R code) ------------------------------------------------
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{codeframe}{RGB}{200,200,200}
+\definecolor{codecomment}{RGB}{100,100,100}
+\definecolor{codestring}{RGB}{163,21,21}
+\definecolor{codekeyword}{RGB}{0,0,200}
+
+\lstdefinelanguage{R}{
+  keywords={function, if, else, for, while, return, library, TRUE, FALSE,
+            NULL, NA, Inf, NaN, in, next, break, repeat, stop, warning,
+            message, invisible},
+  keywordstyle=\color{codekeyword}\bfseries,
+  sensitive=true,
+  comment=[l]{\#},
+  commentstyle=\color{codecomment}\itshape,
+  stringstyle=\color{codestring},
+  morestring=[b]",
+  morestring=[b]'
+}
+
+\lstset{
+  language         = R,
+  basicstyle       = \ttfamily\small,
+  backgroundcolor  = \color{codebg},
+  frame            = single,
+  rulecolor        = \color{codeframe},
+  breaklines       = true,
+  breakatwhitespace= true,
+  showstringspaces = false,
+  tabsize          = 2,
+  captionpos       = b,
+  xleftmargin      = 8pt,
+  xrightmargin     = 8pt,
+  aboveskip        = 8pt,
+  belowskip        = 8pt
+}
+
+% ---- Section formatting -----------------------------------------------------
+\titleformat{\section}{\large\bfseries}{{\thesection}}{0.8em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{{\thesubsection}}{0.6em}{}
+\titleformat{\subsubsection}{\normalsize\itshape\bfseries}{\thesubsubsection}{0.5em}{}
+
+% ---- Header / footer --------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small\textit{geneOptimize v1.1.0}}
+\lhead{\small\textit{Zheng (2025)}}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ---- Title ------------------------------------------------------------------
+\title{%
+  \textbf{geneOptimize: An Object-Oriented Framework for\\[4pt]
+  Genetic Algorithms and Variable Selection in R}\\[6pt]
+  \large Version 1.1.0
+}
+\author{
+  Hui Zheng\\
+  \small\href{mailto:huizheng1@gmail.com}{huizheng1@gmail.com}
+}
+\date{\today}
+
+% =============================================================================
+\begin{document}
+% =============================================================================
+
+\maketitle
+\thispagestyle{empty}
+
+% ---- Abstract ---------------------------------------------------------------
+\begin{abstract}
+\noindent
+\textbf{geneOptimize} is an R package providing a modular, object-oriented
+framework for genetic algorithms (GAs) and memetic algorithms, built on the
+R6 class system. It supports binary and real-valued encodings, plug-in
+operator modules (selection, crossover, mutation), parallel fitness evaluation,
+and hybridization with local search. Version 1.1.0 introduces comprehensive
+input validation, a dedicated \texttt{maximize} parameter for minimization
+problems, explicit \texttt{lower}/\texttt{upper} bound arguments for
+real-valued optimization, selective memetic local-search controls
+(\texttt{local\_search\_every}, \texttt{local\_search\_top\_k}), vectorized
+diversity tracking via \texttt{stats::dist()}, a corrected
+\texttt{MutationGaussian} interface, fully implemented \texttt{Population}
+and \texttt{GeneticAlgorithm} classes, and a comprehensive \texttt{testthat}
+test suite (60+ tests across six files).
+\end{abstract}
+
+\vspace{4pt}
+\noindent\textbf{Keywords:} genetic algorithm, memetic algorithm, variable
+selection, evolutionary computation, R6, parallel computing.
+
+\vspace{6pt}
+\noindent\textbf{Repository:}
+\url{https://github.com/huizheng1-lab/geneOptimize}
+
+\tableofcontents
+\clearpage
+
+% =============================================================================
+\section{Introduction}
+% =============================================================================
+
+Genetic algorithms are population-based meta-heuristics inspired by
+Darwinian natural selection \citep{Holland1975}. At each generation a GA
+evaluates a population of candidate solutions (chromosomes), selects the
+fitter individuals, and applies genetic operators (crossover, mutation) to
+produce offspring. Over many generations the population converges towards
+high-quality solutions.
+
+GAs are widely applied to problems that are non-convex, non-differentiable,
+or combinatorially complex --- including feature selection for statistical
+models \citep{Guyon2003}, hyperparameter optimization \citep{Bergstra2012},
+and real-valued function optimization \citep{Goldberg1989}.
+
+\textbf{geneOptimize} provides a clean R6-based framework \citep{Chang2021}
+that separates concerns into: \textit{chromosome classes} (encoding and
+mutation logic), a \textit{Population class} (initialization and evaluation),
+\textit{operator classes} (modular, swappable selection, crossover, and
+mutation), a \textit{functional interface} \texttt{run\_ga()}, and a
+\textit{plotting suite} for convergence diagnostics.
+
+% =============================================================================
+\section{Installation}
+% =============================================================================
+
+\begin{lstlisting}
+# From CRAN
+install.packages("geneOptimize")
+
+# Development version
+remotes::install_github("huizheng1-lab/geneOptimize")
+\end{lstlisting}
+
+% =============================================================================
+\section{Architecture}
+% =============================================================================
+
+\subsection{Class Hierarchy}
+
+\textbf{geneOptimize} is organized around an R6 class hierarchy employing
+both the \textit{template method} and \textit{strategy} patterns:
+
+\begin{lstlisting}
+Chromosome (abstract base)
+  +-- BinaryChromosome   bit-vector encoding, bit-flip mutation
+  +-- RealChromosome     real-vector encoding, Gaussian noise mutation
+
+Population               list of Chromosomes + evaluate() / get_best()
+GeneticAlgorithm         orchestration wrapper (delegates to run_ga())
+
+SelectionOperator (abstract)
+  +-- SelectionTournament   tournament selection (configurable k)
+  +-- SelectionRoulette     fitness-proportionate selection
+
+CrossoverOperator (abstract)
+  +-- CrossoverSinglePoint  single-point crossover
+  +-- CrossoverUniform      uniform crossover (random mask)
+  +-- CrossoverArithmetic   arithmetic blend (real-valued)
+
+MutationOperator (abstract)
+  +-- MutationSimple     bit-flip (binary) or scaled Gaussian (real)
+  +-- MutationGaussian   Gaussian noise with configurable sigma field
+\end{lstlisting}
+
+Any operator can be replaced by a user-defined R6 class that inherits from
+the appropriate base class and implements the required method
+(\texttt{select()}, \texttt{mate()}, or \texttt{mutate()}).
+
+% =============================================================================
+\section{Functional Interface: \texttt{run\_ga()}}
+% =============================================================================
+
+\subsection{Signature}
+
+\begin{lstlisting}
+run_ga(
+  fitness_fn,                              # Required
+  n_genes,                                 # Required
+  pop_size           = 50,
+  generations        = 100,
+  selection_fn       = SelectionTournament$new(),
+  crossover_fn       = CrossoverSinglePoint$new(),
+  mutation_fn        = MutationSimple$new(),
+  crossover_rate     = 0.8,
+  mutation_rate      = 0.01,
+  type               = "binary",     # "binary" or "real"
+  lower              = NULL,         # required when type = "real"
+  upper              = NULL,         # required when type = "real"
+  maximize           = TRUE,         # FALSE for minimization
+  elitism_count      = 1,
+  verbose            = TRUE,
+  parallel           = FALSE,
+  cores              = 1,
+  local_search_fn    = NULL,
+  local_search_every = 1,
+  local_search_top_k = NULL,
+  track_diversity    = FALSE,
+  ...
+)
+\end{lstlisting}
+
+\subsection{Algorithm}
+
+\begin{enumerate}[leftmargin=*, label=\arabic*.]
+  \item \textbf{Initialize} population (binary: random 0/1; real: uniform
+    over $[\texttt{lower},\,\texttt{upper}]$).
+  \item \textbf{For each generation:}
+    \begin{enumerate}[label=\alph*.]
+      \item Evaluate fitness (optionally in parallel).
+      \item Record \texttt{best\_history}, \texttt{mean\_history},
+        \texttt{worst\_history}; optionally compute
+        \texttt{diversity\_history} via \texttt{stats::dist()}.
+      \item Apply \textbf{elitism}: copy the top \texttt{elitism\_count}
+        individuals unchanged.
+      \item \textbf{Selection} $\to$ build a mating pool.
+      \item \textbf{Crossover} $\to$ generate offspring with probability
+        \texttt{crossover\_rate}.
+      \item \textbf{Mutation} $\to$ perturb offspring gene-by-gene.
+      \item \textbf{Local search} (optional): apply
+        \texttt{local\_search\_fn} every \texttt{local\_search\_every}
+        generations to all or the top-$k$ individuals.
+      \item Restore elites (override first rows of new population).
+    \end{enumerate}
+  \item \textbf{Return} a \texttt{gene\_opt\_res} object.
+\end{enumerate}
+
+\subsection{New in v1.1.0: Input Validation}
+
+All parameters are validated at startup with informative \texttt{stop()}
+messages. Previously invalid inputs either silently produced wrong results or
+generated cryptic internal errors.
+
+\begin{lstlisting}
+run_ga(42, n_genes = 5)
+# Error: 'fitness_fn' must be a function.
+
+run_ga(sum, n_genes = 5, type = "real")
+# Error: 'lower' and 'upper' must be provided when type = "real".
+
+run_ga(sum, n_genes = 5, crossover_rate = 1.5)
+# Error: 'crossover_rate' must be in [0, 1].
+
+run_ga(sum, n_genes = 5, type = "real", lower = 1, upper = 0)
+# Error: All elements of 'lower' must be strictly less than ... 'upper'.
+\end{lstlisting}
+
+Validated parameters: \texttt{fitness\_fn}, \texttt{n\_genes},
+\texttt{pop\_size} ($\geq 2$), \texttt{generations}, \texttt{crossover\_rate}
+$\in [0,1]$, \texttt{mutation\_rate} $\in [0,1]$, \texttt{type},
+\texttt{elitism\_count}, \texttt{maximize}, \texttt{local\_search\_every},
+\texttt{local\_search\_top\_k}, and the relationship $\texttt{lower} <
+\texttt{upper}$ element-wise.
+
+\subsection{New in v1.1.0: Maximization and Minimization}
+
+Prior to v1.1.0, \texttt{run\_ga()} always maximized the fitness function;
+users had to negate their objective to minimize. Version 1.1.0 adds the
+\texttt{maximize} parameter:
+
+\begin{lstlisting}
+# Minimize the Sphere function f(x) = sum(x^2); optimum at origin
+result <- run_ga(
+  fitness_fn  = function(x) sum(x^2),
+  n_genes     = 5,
+  type        = "real",
+  lower       = rep(-5, 5),
+  upper       = rep( 5, 5),
+  maximize    = FALSE,          # NEW in v1.1.0
+  pop_size    = 50,
+  generations = 100,
+  verbose     = FALSE
+)
+\end{lstlisting}
+
+\subsection{New in v1.1.0: Explicit Bounds for Real-Valued Optimization}
+
+\texttt{lower} and \texttt{upper} are now explicit named parameters
+(previously they had to be threaded via \texttt{...}). A scalar is recycled
+to length \texttt{n\_genes}:
+
+\begin{lstlisting}
+result <- run_ga(
+  fitness_fn = function(x) -sum((x - 2)^2),
+  n_genes    = 3,
+  type       = "real",
+  lower      = c(-5, -5, -5),    # explicit, validated
+  upper      = c( 5,  5,  5),
+  verbose    = FALSE
+)
+
+# Scalar recycling
+result <- run_ga(..., type = "real", lower = -10, upper = 10)
+\end{lstlisting}
+
+% =============================================================================
+\section{Operators}
+% =============================================================================
+
+\subsection{Selection}
+
+\subsubsection{Tournament Selection}
+
+Draws $k$ individuals at random and returns the one with the best fitness.
+Default $k = 3$.
+
+\begin{lstlisting}
+sel <- SelectionTournament$new(k = 5)
+\end{lstlisting}
+
+\subsubsection{Roulette-Wheel Selection (v1.1.0 fix)}
+
+Fitness-proportionate selection. The shift applied to negative fitness values
+previously used an undocumented magic constant of \texttt{0.01}; v1.1.0
+replaces this with a documented value of $10^{-6}$ and explicitly handles the
+edge case of all-equal fitness values (previously undefined; now produces
+uniform random selection):
+
+\begin{lstlisting}
+# v1.0.0 (opaque magic number, undefined equal-fitness behaviour)
+adj_fitness <- if (min_fit < 0) fitness_values - min_fit + 0.01 else fitness_values
+
+# v1.1.0 (documented, edge-case safe)
+adj_fitness <- fitness_values - min_fit + 1e-6  # strictly positive
+total  <- sum(adj_fitness)
+probs  <- adj_fitness / total                    # uniform if all equal
+\end{lstlisting}
+
+\subsection{Crossover}
+
+\begin{center}
+\begin{tabular}{lp{8cm}}
+  \toprule
+  \textbf{Class} & \textbf{Description} \\
+  \midrule
+  \texttt{CrossoverSinglePoint} & Swap gene segments at one random cut point \\
+  \texttt{CrossoverUniform}     & Each gene independently inherited from either parent \\
+  \texttt{CrossoverArithmetic}  & Weighted blend: $c_1 = \alpha p_1 + (1-\alpha)p_2$ \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Mutation}
+
+\subsubsection{MutationSimple}
+
+Handles both encodings:
+
+\begin{itemize}
+  \item \textbf{Binary} --- bit-flip with probability \texttt{mutation\_rate}.
+  \item \textbf{Real} --- additive Gaussian noise $\mathcal{N}(0,\,
+    (\texttt{upper}-\texttt{lower})/10)$, bounds-clipped.
+\end{itemize}
+
+\subsubsection{MutationGaussian (signature fixed in v1.1.0)}
+
+The original \texttt{MutationGaussian} had an inconsistent method signature:
+
+\begin{lstlisting}
+# v1.0.0 -- BROKEN: positional mismatch when called by run_ga()
+mutate = function(genes, rate, sigma, lower, upper, ...)
+# run_ga() called it as:  mutate(genes, type, mutation_rate, ...)
+# so  rate   <- type          (wrong: character mapped to numeric arg)
+#     sigma  <- mutation_rate (wrong: 0.01 used as standard deviation)
+\end{lstlisting}
+
+Version 1.1.0 aligns the signature with \texttt{MutationSimple} and makes
+\texttt{sigma} a class field:
+
+\begin{lstlisting}
+# v1.1.0 -- correct and consistent
+mut <- MutationGaussian$new(sigma = 0.05)
+
+result <- run_ga(
+  fitness_fn  = function(x) -sum(x^2),
+  n_genes     = 4,
+  type        = "real",
+  lower       = rep(-1, 4),
+  upper       = rep( 1, 4),
+  mutation_fn = mut,          # plug in like any other operator
+  pop_size    = 30,
+  generations = 50,
+  verbose     = FALSE
+)
+\end{lstlisting}
+
+% =============================================================================
+\section{Use Cases}
+% =============================================================================
+
+\subsection{Binary Encoding: Variable Selection}
+
+A binary chromosome of length $p$ encodes which of the $p$ candidate features
+are included in a model. Fitness is the AUC of a logistic regression, penalized
+by the number of selected features to encourage sparsity:
+
+\begin{lstlisting}
+library(geneOptimize)
+set.seed(42)
+n <- 200; p <- 15
+X <- matrix(rnorm(n * p), n, p)
+colnames(X) <- paste0("V", seq_len(p))
+
+# Ground truth: only V1, V3, V5 affect the outcome
+logits <- 1.5 * X[, 1] - 1.2 * X[, 3] + 0.8 * X[, 5]
+y <- as.factor(ifelse(runif(n) < plogis(logits), "Class1", "Class0"))
+df <- data.frame(y = y, X)
+
+fitness_sparse_auc <- function(genes, penalty = 0.01) {
+  if (sum(genes) == 0) return(0)
+  vars  <- colnames(X)[genes == 1]
+  model <- glm(as.formula(paste("y ~", paste(vars, collapse = " + "))),
+               data = df, family = binomial)
+  preds   <- predict(model, type = "response")
+  roc_obj <- pROC::roc(y, preds, quiet = TRUE)
+  as.numeric(pROC::auc(roc_obj)) - penalty * sum(genes)
+}
+
+result <- run_ga(
+  fitness_fn  = fitness_sparse_auc,
+  n_genes     = p,
+  type        = "binary",
+  pop_size    = 50,
+  generations = 40,
+  verbose     = FALSE
+)
+print(colnames(X)[result$best_chromosome == 1])
+\end{lstlisting}
+
+\subsection{Real-Valued Optimization: Ackley Function}
+
+The Ackley function \citep{Ackley1987} is a standard multi-modal benchmark
+with a global minimum of $0$ at the origin:
+
+\begin{align}
+  f(\mathbf{x}) = -20\exp\!\left(-0.2\sqrt{\tfrac{1}{d}\sum_{i=1}^{d}x_i^2}\right)
+  - \exp\!\left(\tfrac{1}{d}\sum_{i=1}^{d}\cos(2\pi x_i)\right) + 20 + e
+\end{align}
+
+\begin{lstlisting}
+ackley <- function(x) {
+  d <- length(x); a <- 20; b <- 0.2; cc <- 2 * pi
+  -(- a * exp(-b * sqrt(sum(x^2) / d))
+    - exp(sum(cos(cc * x)) / d)
+    + a + exp(1))
+}
+
+result <- run_ga(
+  fitness_fn   = ackley,
+  n_genes      = 2,
+  type         = "real",
+  lower        = rep(-5, 2),
+  upper        = rep( 5, 2),
+  maximize     = FALSE,
+  mutation_fn  = MutationGaussian$new(sigma = 0.1),
+  crossover_fn = CrossoverArithmetic$new(alpha = 0.5),
+  pop_size     = 50,
+  generations  = 100,
+  verbose      = FALSE
+)
+\end{lstlisting}
+
+\subsection{Memetic Algorithms: Selective Local Search (v1.1.0)}
+
+Memetic algorithms \citep{Moscato1989} hybridize evolutionary search with
+local refinement. Version 1.1.0 adds fine-grained controls:
+
+\begin{center}
+\begin{tabular}{lll}
+  \toprule
+  \textbf{Parameter} & \textbf{Type} & \textbf{Description} \\
+  \midrule
+  \texttt{local\_search\_fn}    & function       & Takes a chromosome, returns improved chromosome \\
+  \texttt{local\_search\_every} & integer        & Apply every $n$ generations (default: 1) \\
+  \texttt{local\_search\_top\_k}& integer / NULL & Apply only to top-$k$ individuals \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\begin{lstlisting}
+# Hill-climbing local search
+local_search <- function(chromosome) {
+  candidate <- chromosome + rnorm(length(chromosome), 0, 0.01)
+  if (sum(candidate^2) < sum(chromosome^2)) candidate else chromosome
+}
+
+result <- run_ga(
+  fitness_fn         = function(x) -sum((x - 0.5)^2),
+  n_genes            = 5,
+  type               = "real",
+  lower              = rep(0, 5),
+  upper              = rep(1, 5),
+  pop_size           = 30,
+  generations        = 50,
+  local_search_fn    = local_search,
+  local_search_every = 5,       # apply every 5 generations
+  local_search_top_k = 5,       # apply only to the 5 best individuals
+  verbose            = FALSE
+)
+\end{lstlisting}
+
+Prior to v1.1.0, local search was applied to \emph{every} individual
+\emph{every} generation, which was prohibitively expensive for costly local
+searches. The new parameters reduce the number of calls from
+$\texttt{pop\_size} \times \texttt{generations}$ to at most
+$\texttt{local\_search\_top\_k} \times
+\lceil\texttt{generations}/\texttt{local\_search\_every}\rceil$.
+
+% =============================================================================
+\section{Parallel Processing}
+% =============================================================================
+
+\texttt{run\_ga()} parallelizes fitness evaluation across multiple CPU cores.
+On Unix-like systems \texttt{parallel::mclapply()} is used; on Windows a
+socket cluster via \texttt{parallel::makeCluster()} is created and cleaned up
+automatically via \texttt{on.exit()}.
+
+\textbf{Requirements for \texttt{parallel = TRUE}:}
+\begin{itemize}
+  \item \texttt{fitness\_fn} must be a \emph{pure function}: no global-state
+    reads or writes, no side effects (file I/O, database writes, etc.).
+  \item All objects needed by \texttt{fitness\_fn} must be captured in its
+    closure --- worker processes do not share the parent session's
+    environment.
+  \item Functions that depend on a shared random stream will behave
+    non-deterministically across workers.
+\end{itemize}
+
+\begin{lstlisting}
+result <- run_ga(
+  fitness_fn  = function(x) sum(x),
+  n_genes     = 20,
+  pop_size    = 100,
+  generations = 200,
+  parallel    = TRUE,
+  cores       = 4,
+  verbose     = FALSE
+)
+\end{lstlisting}
+
+% =============================================================================
+\section{Population and GeneticAlgorithm Classes (v1.1.0)}
+% =============================================================================
+
+Version 1.1.0 completes the OOP infrastructure that was partially stubbed in
+v1.0.0.
+
+\subsection{Population}
+
+\begin{lstlisting}
+# Binary population
+pop <- Population$new(size = 20, n_genes = 10, type = "binary")
+pop$evaluate(function(x) sum(x))
+best <- pop$get_best()
+cat("Best fitness:", best$fitness, "\n")
+
+# Real-valued population
+pop_real <- Population$new(size = 20, n_genes = 5, type = "real",
+                           lower = -1, upper = 1)
+\end{lstlisting}
+
+The previously empty \texttt{evaluate()} and \texttt{get\_best()} method
+bodies are now fully implemented. \texttt{get\_best()} uses
+\texttt{vapply()} for type-safe fitness extraction.
+
+\subsection{GeneticAlgorithm}
+
+\begin{lstlisting}
+pop    <- Population$new(size = 30, n_genes = 10, type = "binary")
+ga_obj <- GeneticAlgorithm$new(
+  pop           = pop,
+  fitness_fn    = function(x) sum(x),
+  generations   = 50,
+  crossover_rate = 0.8,
+  mutation_rate  = 0.01
+)
+result <- ga_obj$run(verbose = FALSE)
+plot_convergence(result)
+\end{lstlisting}
+
+\texttt{GeneticAlgorithm\$run()} now delegates to \texttt{run\_ga()},
+ensuring that the object-oriented and functional interfaces remain consistent.
+
+% =============================================================================
+\section{Visualization}
+% =============================================================================
+
+\begin{center}
+\begin{tabular}{lp{9cm}}
+  \toprule
+  \textbf{Function} & \textbf{Description} \\
+  \midrule
+  \texttt{plot\_convergence(x)} & Best fitness over generations \\
+  \texttt{plot\_fitness\_stats(x)} & Best, mean, and worst fitness with shaded band \\
+  \texttt{plot\_diversity(x)} & Mean pairwise population diversity \\
+  \texttt{plot\_diagnostics(x, conv\_threshold)} & 4-panel diagnostic (convergence, improvement, rate of change, summary) \\
+  \texttt{plot\_compare(...)} & Overlay convergence curves from multiple runs \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Diversity Tracking (v1.1.0 performance fix)}
+
+Diversity is computed as mean pairwise distance: Hamming (binary) or Euclidean
+(real). The v1.0.0 implementation used \texttt{Vectorize(outer())}, an R-level
+loop with $O(n^2)$ overhead. Version 1.1.0 replaces this with
+\texttt{stats::dist()}, a vectorized C-level computation:
+
+\begin{lstlisting}
+# v1.0.0 -- slow R-level outer loop
+hamming <- Vectorize(function(a, b) sum(a != b))
+div_mat <- outer(1:pop_size, 1:pop_size,
+                 function(i, j) hamming(pop[i,], pop[j,]))
+
+# v1.1.0 -- vectorized C-level (stats::dist)
+# Binary: Manhattan distance on 0/1 matrix == Hamming distance
+div_mat <- as.matrix(stats::dist(population, method = "manhattan"))
+diversity_history[gen] <- mean(div_mat[lower.tri(div_mat)])
+\end{lstlisting}
+
+\textbf{Note:} diversity tracking is disabled by default
+(\texttt{track\_diversity = FALSE}) because even the improved implementation
+is $O(n^2)$ in population size. The error raised by \texttt{plot\_diversity()}
+when diversity was not tracked now includes the corrective instruction:
+
+\begin{lstlisting}
+# v1.0.0 -- unhelpful message
+# Error: Diversity history not available. Enable diversity tracking in run_ga().
+
+# v1.1.0 -- actionable message
+# Error: Diversity history not available. Re-run run_ga() with
+#   'track_diversity = TRUE':
+#     run_ga(..., track_diversity = TRUE)
+\end{lstlisting}
+
+\subsection{Configurable Convergence Threshold}
+
+\texttt{plot\_diagnostics()} previously hard-coded the convergence check
+threshold at 0.001 (0.1\% improvement over the last 10 generations). Version
+1.1.0 exposes this as \texttt{conv\_threshold}:
+
+\begin{lstlisting}
+plot_diagnostics(result, conv_threshold = 0.005)  # 0.5% threshold
+\end{lstlisting}
+
+% =============================================================================
+\section{Custom Operators}
+% =============================================================================
+
+Users can implement custom operators by inheriting from the appropriate base
+class:
+
+\begin{lstlisting}
+library(R6)
+
+# Epsilon-greedy selection: exploit the best with probability (1-eps),
+# explore uniformly at random with probability eps.
+EpsilonGreedy <- R6Class(
+  "EpsilonGreedy",
+  inherit = SelectionOperator,
+  public = list(
+    eps = 0.1,
+    initialize = function(eps = 0.1) { self$eps <- eps },
+    select = function(population, fitness_values, n = 1, ...) {
+      if (runif(1) < self$eps) {
+        return(population[sample(nrow(population), 1), ])
+      }
+      population[which.max(fitness_values), ]
+    }
+  )
+)
+
+result <- run_ga(
+  fitness_fn   = function(x) sum(x),
+  n_genes      = 15,
+  selection_fn = EpsilonGreedy$new(eps = 0.2),
+  pop_size     = 40,
+  generations  = 60,
+  verbose      = FALSE
+)
+\end{lstlisting}
+
+% =============================================================================
+\section{Test Suite (v1.1.0)}
+% =============================================================================
+
+Version 1.1.0 introduces a full \texttt{testthat} \citep{Wickham2011} test
+suite. Prior to this release, \texttt{testthat} was listed in
+\texttt{Suggests} but no tests existed, creating an unacceptable regression
+risk.
+
+\begin{center}
+\begin{tabular}{lp{8cm}}
+  \toprule
+  \textbf{File} & \textbf{Coverage} \\
+  \midrule
+  \texttt{test-chromosome.R}  & \texttt{BinaryChromosome}, \texttt{RealChromosome}: initialization, mutation, deep clone \\
+  \texttt{test-operators.R}   & All selection, crossover, and mutation operators including edge cases \\
+  \texttt{test-run\_ga.R}     & Input validation (12 tests), binary/real types, \texttt{maximize}, elitism monotonicity, diversity, local-search call counts \\
+  \texttt{test-methods.R}     & \texttt{new\_gene\_opt\_res}, \texttt{print}, \texttt{summary}, \texttt{plot} \\
+  \texttt{test-plotting.R}    & All plotting functions, error conditions, actionable messages \\
+  \texttt{test-population.R}  & \texttt{Population} initialization (binary and real), \texttt{evaluate()}, \texttt{get\_best()} \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+Run the suite with:
+
+\begin{lstlisting}
+devtools::test()          # or
+testthat::test_package("geneOptimize")
+\end{lstlisting}
+
+% =============================================================================
+\section{Summary of Changes in v1.1.0}
+% =============================================================================
+
+\begin{center}
+\begin{tabular}{p{3.5cm}p{9.5cm}}
+  \toprule
+  \textbf{Component} & \textbf{Change} \\
+  \midrule
+  \texttt{run\_ga()} &
+    Added \texttt{maximize}, \texttt{lower}, \texttt{upper} as explicit
+    named parameters; comprehensive input validation; added
+    \texttt{local\_search\_every} and \texttt{local\_search\_top\_k};
+    diversity tracking switched to \texttt{stats::dist()}; parallel
+    requirements documented. \\[4pt]
+  \texttt{MutationGaussian} &
+    Fixed method signature to match \texttt{MutationSimple} interface;
+    \texttt{sigma} is now a class field. \\[4pt]
+  \texttt{SelectionRoulette} &
+    Replaced magic offset 0.01 with documented $10^{-6}$; handles
+    all-equal fitness (uniform selection). \\[4pt]
+  \texttt{plot\_diagnostics()} &
+    Added user-configurable \texttt{conv\_threshold}; fixed
+    rate-of-change denominator to \texttt{abs()}. \\[4pt]
+  \texttt{plot\_diversity()} &
+    Error message includes corrective \texttt{run\_ga()} call. \\[4pt]
+  \texttt{Population} &
+    Completed \texttt{initialize()}, \texttt{evaluate()},
+    \texttt{get\_best()}. \\[4pt]
+  \texttt{GeneticAlgorithm} &
+    Completed \texttt{run()} (delegates to \texttt{run\_ga()}). \\[4pt]
+  Tests &
+    60+ tests across 6 files; \texttt{testthat} suite fully implemented. \\[4pt]
+  \texttt{DESCRIPTION} &
+    Version bumped to 1.1.0; \texttt{grDevices} added to Imports;
+    \texttt{pROC} added to Suggests. \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+% =============================================================================
+\section{Conclusion}
+% =============================================================================
+
+\textbf{geneOptimize} provides a production-ready, extensible framework for
+genetic and memetic algorithms in R. Its R6-based architecture enables easy
+operator swapping and extension, while the \texttt{run\_ga()} functional
+interface keeps common use cases concise. Version 1.1.0 focuses on
+correctness, usability, and testability --- making the package suitable for
+both research prototyping and production variable selection pipelines.
+
+% =============================================================================
+% References
+% =============================================================================
+\bibliographystyle{plainnat}
+\begin{thebibliography}{99}
+
+\bibitem[Ackley(1987)]{Ackley1987}
+Ackley, D.~H. (1987).
+\newblock \emph{A Connectionist Machine for Genetic Hillclimbing}.
+\newblock Kluwer Academic Publishers, Boston.
+
+\bibitem[Bergstra \& Bengio(2012)]{Bergstra2012}
+Bergstra, J. and Bengio, Y. (2012).
+\newblock Random search for hyper-parameter optimization.
+\newblock \emph{Journal of Machine Learning Research}, 13:281--305.
+
+\bibitem[Chang(2021)]{Chang2021}
+Chang, W. (2021).
+\newblock \emph{R6: Encapsulated Classes with Reference Semantics}.
+\newblock R package version 2.5.1.
+\newblock \url{https://CRAN.R-project.org/package=R6}.
+
+\bibitem[Goldberg(1989)]{Goldberg1989}
+Goldberg, D.~E. (1989).
+\newblock \emph{Genetic Algorithms in Search, Optimization and Machine
+  Learning}.
+\newblock Addison-Wesley, Reading, MA.
+
+\bibitem[Guyon \& Elisseeff(2003)]{Guyon2003}
+Guyon, I. and Elisseeff, A. (2003).
+\newblock An introduction to variable and feature selection.
+\newblock \emph{Journal of Machine Learning Research}, 3:1157--1182.
+
+\bibitem[Holland(1975)]{Holland1975}
+Holland, J.~H. (1975).
+\newblock \emph{Adaptation in Natural and Artificial Systems}.
+\newblock University of Michigan Press, Ann Arbor.
+
+\bibitem[Moscato(1989)]{Moscato1989}
+Moscato, P. (1989).
+\newblock On evolution, search, optimization, genetic algorithms and martial
+  arts: Towards memetic algorithms.
+\newblock Technical Report 826, California Institute of Technology.
+
+\bibitem[Wickham(2011)]{Wickham2011}
+Wickham, H. (2011).
+\newblock testthat: Get started with testing.
+\newblock \emph{The R Journal}, 3(1):5--10.
+
+\end{thebibliography}
+
+\end{document}
