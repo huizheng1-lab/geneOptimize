@@ -1,3 +1,55 @@
+# geneOptimize 1.1.0
+
+## New Features
+
+- `run_ga()`: Added `maximize` parameter (default `TRUE`); set `FALSE` for
+  minimization problems without negating the fitness function.
+- `run_ga()`: `lower` and `upper` are now explicit named parameters (previously
+  required via `...`), with scalar recycling and cross-validation.
+- `run_ga()`: Added `local_search_every` — apply memetic local search every _n_
+  generations instead of every generation.
+- `run_ga()`: Added `local_search_top_k` — restrict memetic local search to the
+  top-_k_ individuals, reducing computational cost.
+- `plot_diagnostics()`: Added `conv_threshold` parameter to make the convergence
+  indicator threshold configurable (default: 0.001 = 0.1%).
+- `Population$initialize()`: Fully implemented; creates `BinaryChromosome` or
+  `RealChromosome` objects, accepts `lower`/`upper` for real-valued populations.
+- `Population$evaluate()` / `Population$get_best()`: Fully implemented.
+- `GeneticAlgorithm$run()`: Fully implemented (delegates to `run_ga()`).
+- Added comprehensive `testthat` test suite (60+ tests across 6 files):
+  `test-chromosome.R`, `test-operators.R`, `test-run_ga.R`, `test-methods.R`,
+  `test-plotting.R`, `test-population.R`.
+
+## Improvements
+
+- **Diversity tracking** now uses `stats::dist()` (vectorized C-level
+  computation) instead of the previous `Vectorize(outer())` loop, providing
+  substantial speedup for large populations.
+- `SelectionRoulette`: Replaced magic constant `0.01` with documented `1e-6`;
+  now correctly handles all-equal fitness values (uniform random selection).
+- `MutationGaussian`: Fixed method signature to match `MutationSimple`
+  (`mutate(genes, type, rate, lower, upper, ...)`). `sigma` is now a class
+  field set at construction time (`MutationGaussian$new(sigma = 0.1)`).
+- `plot_diversity()`: Error message now includes the exact corrective action
+  (`run_ga(..., track_diversity = TRUE)`).
+- `run_ga()`: Comprehensive input validation for all parameters with
+  informative error messages.
+- `run_ga()`: Parallel-mode documentation lists explicit requirements for pure
+  fitness functions.
+- Added `grDevices` to `Imports` and `pROC` to `Suggests`.
+- Updated vignette/paper source (`vignettes/geneOptimize_paper.Rmd`) to
+  document all new and corrected functionality.
+
+## Bug Fixes
+
+- Fixed `MutationGaussian$mutate()` parameter mapping (previously `type` was
+  silently mapped to `rate`, and `mutation_rate` to `sigma`, causing wrong
+  mutation behaviour when using `MutationGaussian` with `run_ga()`).
+- Fixed `plot_diagnostics()` rate-of-change denominator to use
+  `abs(history[-n])` instead of bare `history[-n]`, avoiding artefacts when
+  fitness values are near zero.
+- `Population` and `GeneticAlgorithm` stubs are now fully functional.
+
 # geneOptimize (development version)
 
 ## New Features

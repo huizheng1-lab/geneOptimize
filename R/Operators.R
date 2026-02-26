@@ -126,24 +126,36 @@ MutationSimple <- R6::R6Class(
 )
 
 #' Gaussian Mutation Class
-#' @description R6 class for Gaussian mutation.
+#' @description R6 class for Gaussian mutation with configurable standard
+#'   deviation.  Uses the same interface as \code{MutationSimple} so it can
+#'   be passed directly to \code{run_ga()}.
+#' @field sigma Standard deviation of the Gaussian noise (default: 0.1).
 #' @export
 MutationGaussian <- R6::R6Class(
   "MutationGaussian",
   inherit = MutationOperator,
   public = list(
+    sigma = 0.1,
+    #' @description Initialize.
+    #' @param sigma Standard deviation of Gaussian noise (default: 0.1).
+    initialize = function(sigma = 0.1) {
+      self$sigma <- sigma
+    },
     #' @description Mutate genes.
     #' @param genes Gene vector.
-    #' @param rate Rate.
-    #' @param sigma Sigma.
-    #' @param lower Lower bound.
-    #' @param upper Upper bound.
-    #' @param ... Additional arguments.
-    mutate = function(genes, rate, sigma, lower, upper, ...) {
-       mask <- stats::runif(length(genes)) < rate
-       noise <- stats::rnorm(sum(mask), mean = 0, sd = sigma)
-       genes[mask] <- genes[mask] + noise
-       return(pmax(pmin(genes, upper), lower))
+    #' @param type Encoding type ("binary" or "real").
+    #' @param rate Per-gene mutation probability.
+    #' @param lower Lower bound (used when type = "real").
+    #' @param upper Upper bound (used when type = "real").
+    #' @param ... Additional arguments (ignored).
+    mutate = function(genes, type, rate, lower = NULL, upper = NULL, ...) {
+      mask  <- stats::runif(length(genes)) < rate
+      noise <- stats::rnorm(sum(mask), mean = 0, sd = self$sigma)
+      genes[mask] <- genes[mask] + noise
+      if (!is.null(lower) && !is.null(upper)) {
+        genes <- pmax(pmin(genes, upper), lower)
+      }
+      return(genes)
     }
   )
 )
@@ -207,10 +219,16 @@ SelectionRoulette <- R6::R6Class(
     #' @param ... Additional arguments.
     select = function(population, fitness_values, n = 1, ...) {
       pop_size <- nrow(population)
-      min_fit <- min(fitness_values)
-      adj_fitness <- if (min_fit < 0) fitness_values - min_fit + 0.01 else fitness_values
-      probs <- adj_fitness / sum(adj_fitness)
-      idx <- sample(1:pop_size, 1, prob = probs)
+      min_fit  <- min(fitness_values)
+      # Shift fitness values to be strictly positive so they can serve as
+      # selection probabilities.  The small offset (1e-6) prevents the
+      # least-fit individual from receiving exactly zero probability and
+      # gracefully handles the edge case where all individuals share equal
+      # fitness (resulting in uniform random selection).
+      adj_fitness <- fitness_values - min_fit + 1e-6
+      total <- sum(adj_fitness)
+      probs <- adj_fitness / total
+      idx   <- sample(seq_len(pop_size), 1, prob = probs)
       return(population[idx, ])
     }
   )

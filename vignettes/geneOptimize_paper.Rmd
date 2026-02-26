@@ -1,0 +1,621 @@
+---
+title: "geneOptimize: An Object-Oriented Framework for Genetic Algorithms and Variable Selection in R"
+author: "Hui Zheng"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+vignette: >
+  %\VignetteIndexEntry{geneOptimize: An Object-Oriented Framework for Genetic Algorithms and Variable Selection in R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  eval      = FALSE,
+  message   = FALSE,
+  warning   = FALSE,
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+# Abstract
+
+**geneOptimize** is an R package that provides a modular, object-oriented
+framework for genetic algorithms (GAs) and memetic algorithms.  Built on the
+R6 class system, it supports binary and real-valued encodings, plug-in
+operator modules (selection, crossover, mutation), parallel fitness
+evaluation, and hybridization with local search (memetic algorithms).  Version
+1.1.0 introduces input validation with informative error messages, a dedicated
+`maximize` parameter for minimization problems, explicit `lower`/`upper`
+bound arguments for real-valued optimization, selective memetic local search
+controls, vectorized diversity tracking, a corrected `MutationGaussian`
+interface, a fully functional `Population` class, and a comprehensive
+`testthat` test suite.
+
+---
+
+# Introduction
+
+Genetic algorithms are population-based meta-heuristics inspired by
+Darwinian natural selection [@Holland1975].  At each generation a GA evaluates
+a population of candidate solutions (chromosomes), selects the fitter
+individuals, and applies genetic operators (crossover, mutation) to produce
+offspring.  Over many generations the population converges toward high-quality
+solutions.
+
+GAs are widely applied to problems that are non-convex, non-differentiable, or
+combinatorially complex — including feature selection for statistical models
+[@Guyon2003], hyperparameter optimization [@Bergstra2012], and real-valued
+function optimization [@Goldberg1989].
+
+**geneOptimize** provides a clean R6-based framework that separates concerns
+into:
+
+- **Chromosome classes** — encoding and mutation logic.
+- **Population class** — initialization and evaluation.
+- **Operator classes** — modular, swappable selection/crossover/mutation.
+- **`run_ga()` functional interface** — high-level entry point.
+- **Plotting suite** — rich convergence diagnostics.
+
+---
+
+# Installation
+
+```{r install, eval=FALSE}
+# From CRAN
+install.packages("geneOptimize")
+
+# Development version from GitHub
+# install.packages("remotes")
+remotes::install_github("huizheng1-lab/geneOptimize")
+```
+
+---
+
+# Architecture
+
+## Class Hierarchy
+
+```
+Chromosome (abstract)
+  ├── BinaryChromosome   — bit-vector encoding, bit-flip mutation
+  └── RealChromosome     — real-vector encoding, Gaussian noise mutation
+
+Population             — list of Chromosomes + evaluate() / get_best()
+GeneticAlgorithm       — orchestration wrapper (delegates to run_ga())
+
+SelectionOperator (abstract)
+  ├── SelectionTournament  — tournament selection (configurable k)
+  └── SelectionRoulette    — fitness-proportionate selection
+
+CrossoverOperator (abstract)
+  ├── CrossoverSinglePoint — single-point crossover
+  ├── CrossoverUniform     — uniform crossover (random mask)
+  └── CrossoverArithmetic  — arithmetic blend (real-valued)
+
+MutationOperator (abstract)
+  ├── MutationSimple    — bit-flip (binary) or scaled Gaussian (real)
+  └── MutationGaussian  — Gaussian noise with configurable sigma
+```
+
+The strategy pattern is used throughout: any operator can be replaced by a
+user-defined R6 class that inherits from the appropriate base class and
+implements the required method (`select()`, `mate()`, or `mutate()`).
+
+## Main Entry Point
+
+The `run_ga()` function is the primary user-facing interface.  It accepts an
+R6 operator for each GA phase and orchestrates the full evolutionary loop.
+
+---
+
+# Functional Interface: `run_ga()`
+
+## Signature
+
+```{r run_ga_sig}
+run_ga(
+  fitness_fn,                              # Required
+  n_genes,                                 # Required
+  pop_size           = 50,
+  generations        = 100,
+  selection_fn       = SelectionTournament$new(),
+  crossover_fn       = CrossoverSinglePoint$new(),
+  mutation_fn        = MutationSimple$new(),
+  crossover_rate     = 0.8,
+  mutation_rate      = 0.01,
+  type               = "binary",           # "binary" or "real"
+  lower              = NULL,               # required when type = "real"
+  upper              = NULL,               # required when type = "real"
+  maximize           = TRUE,               # FALSE for minimization
+  elitism_count      = 1,
+  verbose            = TRUE,
+  parallel           = FALSE,
+  cores              = 1,
+  local_search_fn    = NULL,
+  local_search_every = 1,
+  local_search_top_k = NULL,
+  track_diversity    = FALSE,
+  ...
+)
+```
+
+## Algorithm
+
+1. **Initialize** population (binary: random 0/1; real: uniform over
+   `[lower, upper]`).
+2. **For each generation:**
+   a. Evaluate fitness (optionally in parallel).
+   b. Record `best_history`, `mean_history`, `worst_history`; optionally
+      compute `diversity_history` using `stats::dist()`.
+   c. Apply **elitism**: copy the top `elitism_count` individuals unchanged.
+   d. **Selection** → build a mating pool.
+   e. **Crossover** → generate offspring with probability `crossover_rate`.
+   f. **Mutation** → perturb offspring gene-by-gene.
+   g. **Local search** (optional): apply `local_search_fn` every
+      `local_search_every` generations, to all or the top-`k` individuals.
+   h. Restore elite individuals (they override the first rows).
+3. **Return** a `gene_opt_res` object.
+
+## Maximization and Minimization
+
+Prior to v1.1.0, `run_ga()` always maximized the fitness function; users had
+to negate their objective to minimize.  Version 1.1.0 adds:
+
+```{r maximize_param}
+# Minimize the Sphere function
+result <- run_ga(
+  fitness_fn  = function(x) sum(x^2),
+  n_genes     = 5,
+  type        = "real",
+  lower       = rep(-5, 5),
+  upper       = rep( 5, 5),
+  maximize    = FALSE,          # <-- new in v1.1.0
+  pop_size    = 50,
+  generations = 100,
+  verbose     = FALSE
+)
+```
+
+## Explicit Bounds for Real-Valued Optimization
+
+`lower` and `upper` are now **named parameters** in the function signature
+(previously they had to be passed via `...`), which makes the interface
+clearer and enables proper validation:
+
+```{r bounds_example}
+result <- run_ga(
+  fitness_fn  = function(x) -sum((x - 2)^2),
+  n_genes     = 3,
+  type        = "real",
+  lower       = c(-5, -5, -5),    # explicit lower bounds
+  upper       = c( 5,  5,  5),    # explicit upper bounds
+  pop_size    = 40,
+  generations = 80,
+  verbose     = FALSE
+)
+```
+
+Scalar bounds are recycled to length `n_genes`:
+
+```{r scalar_bounds}
+result <- run_ga(..., lower = -10, upper = 10)
+```
+
+## Input Validation
+
+All parameters are validated at startup with informative error messages:
+
+```{r validation_demo, error=TRUE}
+run_ga(42, n_genes = 5)
+#> Error: 'fitness_fn' must be a function.
+
+run_ga(sum, n_genes = 5, type = "real")
+#> Error: 'lower' and 'upper' must be provided when type = "real".
+
+run_ga(sum, n_genes = 5, crossover_rate = 1.5)
+#> Error: 'crossover_rate' must be in [0, 1].
+```
+
+---
+
+# Operators
+
+## Selection
+
+### Tournament Selection
+
+Randomly draws `k` individuals and returns the one with the highest
+(or lowest, for minimization) fitness.  Default `k = 3`.
+
+```{r tournament}
+sel <- SelectionTournament$new(k = 5)
+```
+
+### Roulette-Wheel Selection
+
+Fitness-proportionate selection.  In v1.1.0 the shift offset was changed from
+the ad-hoc `0.01` to `1e-6` and is now documented in the source code.
+The edge case of all-equal fitness values (previously undefined behaviour) now
+correctly produces uniform random selection:
+
+```{r roulette}
+sel <- SelectionRoulette$new()
+```
+
+## Crossover
+
+| Class | Description |
+|-------|-------------|
+| `CrossoverSinglePoint` | Swap gene segments at one random point |
+| `CrossoverUniform` | Each gene independently inherited from either parent |
+| `CrossoverArithmetic` | Weighted blend: `c1 = α·p1 + (1−α)·p2` |
+
+## Mutation
+
+### MutationSimple
+
+Handles both encodings:
+
+- **Binary** — bit-flip with probability `mutation_rate`.
+- **Real** — additive Gaussian noise scaled by `(upper − lower) / 10`.
+
+### MutationGaussian (revised in v1.1.0)
+
+The `MutationGaussian` class previously had an inconsistent method signature
+`mutate(genes, rate, sigma, lower, upper)` that did not match the interface
+expected by `run_ga()`.  In v1.1.0 its signature is aligned with
+`MutationSimple`:
+
+```{r gaussian_mutation}
+# sigma is now a class field set at construction time
+mut <- MutationGaussian$new(sigma = 0.05)
+
+result <- run_ga(
+  fitness_fn  = function(x) -sum(x^2),
+  n_genes     = 4,
+  type        = "real",
+  lower       = rep(-1, 4),
+  upper       = rep( 1, 4),
+  mutation_fn = mut,
+  pop_size    = 30,
+  generations = 50,
+  verbose     = FALSE
+)
+```
+
+---
+
+# Binary Encoding: Variable Selection
+
+Variable selection for statistical models is a natural GA application:
+a binary chromosome of length $p$ encodes which of the $p$ candidate features
+are included.
+
+```{r var_selection}
+library(geneOptimize)
+
+set.seed(42)
+n <- 200; p <- 15
+X <- matrix(rnorm(n * p), n, p)
+colnames(X) <- paste0("V", seq_len(p))
+
+# Ground truth: only V1, V3, V5 affect outcome
+logits <- 1.5 * X[, 1] - 1.2 * X[, 3] + 0.8 * X[, 5]
+y <- as.factor(ifelse(runif(n) < plogis(logits), "Class1", "Class0"))
+df <- data.frame(y = y, X)
+
+fitness_sparse_auc <- function(genes, penalty = 0.01) {
+  if (sum(genes) == 0) return(0)
+  vars  <- colnames(X)[genes == 1]
+  model <- glm(as.formula(paste("y ~", paste(vars, collapse = " + "))),
+               data = df, family = binomial)
+  preds   <- predict(model, type = "response")
+  roc_obj <- pROC::roc(y, preds, quiet = TRUE)
+  as.numeric(pROC::auc(roc_obj)) - penalty * sum(genes)
+}
+
+result <- run_ga(
+  fitness_fn  = fitness_sparse_auc,
+  n_genes     = p,
+  type        = "binary",
+  pop_size    = 50,
+  generations = 40,
+  verbose     = FALSE
+)
+
+print(colnames(X)[result$best_chromosome == 1])
+```
+
+---
+
+# Real-Valued Optimization
+
+## Ackley Function
+
+The Ackley function is a standard multi-modal benchmark with a global
+minimum of 0 at the origin [@Ackley1987].
+
+```{r ackley}
+ackley <- function(x) {
+  d    <- length(x)
+  a <- 20; b <- 0.2; c <- 2 * pi
+  -(- a * exp(-b * sqrt(sum(x^2) / d))
+    - exp(sum(cos(c * x)) / d)
+    + a + exp(1))
+}
+
+result <- run_ga(
+  fitness_fn  = ackley,
+  n_genes     = 2,
+  type        = "real",
+  lower       = rep(-5, 2),
+  upper       = rep( 5, 2),
+  maximize    = FALSE,
+  mutation_fn = MutationGaussian$new(sigma = 0.1),
+  crossover_fn = CrossoverArithmetic$new(alpha = 0.5),
+  pop_size    = 50,
+  generations = 100,
+  verbose     = FALSE
+)
+print(result)
+```
+
+---
+
+# Memetic Algorithms
+
+Memetic algorithms [@Moscato1989] hybridize evolutionary search with local
+refinement.  `run_ga()` supports this through three parameters new or
+improved in v1.1.0:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `local_search_fn` | function | Takes a chromosome, returns improved chromosome |
+| `local_search_every` | integer | Apply every _n_ generations (default: 1) |
+| `local_search_top_k` | integer / NULL | Apply only to top-_k_ individuals |
+
+**New in v1.1.0:** `local_search_every` and `local_search_top_k` allow
+fine-grained control over the computational cost of local search.
+
+```{r memetic}
+fitness_fn <- function(x) -sum((x - 0.5)^2)
+
+# Hill-climbing local search
+local_search <- function(chromosome) {
+  candidate <- chromosome + rnorm(length(chromosome), 0, 0.01)
+  if (fitness_fn(candidate) > fitness_fn(chromosome)) candidate else chromosome
+}
+
+result <- run_ga(
+  fitness_fn         = fitness_fn,
+  n_genes            = 5,
+  type               = "real",
+  lower              = rep(0, 5),
+  upper              = rep(1, 5),
+  pop_size           = 30,
+  generations        = 50,
+  local_search_fn    = local_search,
+  local_search_every = 5,       # apply every 5 generations
+  local_search_top_k = 5,       # apply only to the 5 best individuals
+  verbose            = FALSE
+)
+```
+
+---
+
+# Parallel Processing
+
+`run_ga()` parallelizes fitness evaluation across multiple CPU cores.  On
+Unix-like systems `parallel::mclapply()` is used; on Windows a socket cluster
+via `parallel::makeCluster()` is created and cleaned up automatically.
+
+**Requirements for `parallel = TRUE`:**
+
+- `fitness_fn` must be a *pure function*: no global-state reads/writes, no
+  side effects.
+- All objects needed by `fitness_fn` must be captured in its closure.
+
+```{r parallel}
+result <- run_ga(
+  fitness_fn  = function(x) sum(x),
+  n_genes     = 20,
+  pop_size    = 100,
+  generations = 200,
+  parallel    = TRUE,
+  cores       = 4,
+  verbose     = FALSE
+)
+```
+
+---
+
+# Visualization
+
+## Convergence Curve
+
+```{r plot_conv}
+plot_convergence(result)
+```
+
+## Fitness Statistics (Best / Mean / Worst)
+
+```{r plot_stats}
+plot_fitness_stats(result)
+```
+
+## Population Diversity
+
+Diversity is computed as mean pairwise distance (Hamming for binary, Euclidean
+for real) using the vectorized `stats::dist()` function — replacing the
+slower `Vectorize(outer())` loop from v1.0.0.
+
+**Note:** diversity tracking is disabled by default (`track_diversity = FALSE`)
+because the O(n²) computation is non-trivial for large populations.  The
+error message raised by `plot_diversity()` when diversity was not tracked now
+includes the exact corrective action:
+
+```{r plot_div}
+result_div <- run_ga(
+  fitness_fn      = function(x) sum(x),
+  n_genes         = 10,
+  pop_size        = 30,
+  generations     = 50,
+  track_diversity = TRUE,
+  verbose         = FALSE
+)
+plot_diversity(result_div)
+```
+
+## Diagnostic Panel
+
+```{r plot_diag}
+# conv_threshold is now user-configurable (default: 0.001 = 0.1%)
+plot_diagnostics(result, conv_threshold = 0.005)
+```
+
+## Comparing Runs
+
+```{r plot_cmp}
+plot_compare(result1, result2, result3,
+             labels = c("Tournament", "Roulette", "Uniform Crossover"))
+```
+
+---
+
+# Population and GeneticAlgorithm Classes
+
+Version 1.1.0 completes the OOP infrastructure that was partially stubbed in
+v1.0.0.
+
+## Population
+
+```{r population_ex}
+pop <- Population$new(size = 20, n_genes = 10, type = "binary")
+pop$evaluate(function(x) sum(x))
+best <- pop$get_best()
+cat("Best fitness:", best$fitness, "\n")
+
+# Real-valued population
+pop_real <- Population$new(size = 20, n_genes = 5, type = "real",
+                           lower = -1, upper = 1)
+```
+
+## GeneticAlgorithm
+
+```{r ga_class_ex}
+pop    <- Population$new(size = 30, n_genes = 10, type = "binary")
+ga_obj <- GeneticAlgorithm$new(
+  pop           = pop,
+  fitness_fn    = function(x) sum(x),
+  generations   = 50,
+  crossover_rate = 0.8,
+  mutation_rate  = 0.01
+)
+result <- ga_obj$run(verbose = FALSE)
+plot_convergence(result)
+```
+
+---
+
+# Testing
+
+Version 1.1.0 introduces a full `testthat` [@Wickham2011] test suite covering:
+
+| Test file | Coverage |
+|-----------|----------|
+| `test-chromosome.R` | `BinaryChromosome`, `RealChromosome` |
+| `test-operators.R` | All selection, crossover, and mutation operators |
+| `test-run_ga.R` | Input validation, binary/real types, maximize, elitism, diversity, local search |
+| `test-methods.R` | `new_gene_opt_res`, `print`, `summary`, `plot` |
+| `test-plotting.R` | All plotting functions, error conditions |
+| `test-population.R` | `Population` initialization, evaluate, get_best |
+
+Run the test suite with:
+
+```{r test_suite, eval=FALSE}
+testthat::test_package("geneOptimize")
+# or
+devtools::test()
+```
+
+---
+
+# Custom Operators
+
+Users can extend any operator class to implement custom behaviour:
+
+```{r custom_op}
+library(R6)
+
+# Custom selection: epsilon-greedy (exploit best with probability 1-eps,
+# explore randomly with probability eps)
+EpsilonGreedySelection <- R6Class(
+  "EpsilonGreedySelection",
+  inherit = SelectionOperator,
+  public = list(
+    eps = 0.1,
+    initialize = function(eps = 0.1) { self$eps <- eps },
+    select = function(population, fitness_values, n = 1, ...) {
+      if (runif(1) < self$eps) {
+        return(population[sample(nrow(population), 1), ])
+      }
+      population[which.max(fitness_values), ]
+    }
+  )
+)
+
+result <- run_ga(
+  fitness_fn   = function(x) sum(x),
+  n_genes      = 15,
+  selection_fn = EpsilonGreedySelection$new(eps = 0.2),
+  pop_size     = 40,
+  generations  = 60,
+  verbose      = FALSE
+)
+```
+
+---
+
+# Summary of Changes in v1.1.0
+
+| Category | Change |
+|----------|--------|
+| `run_ga()` | Added `maximize`, `lower`, `upper` as explicit named parameters |
+| `run_ga()` | Comprehensive input validation with informative error messages |
+| `run_ga()` | Added `local_search_every` and `local_search_top_k` for selective memetic local search |
+| `run_ga()` | Replaced `Vectorize(outer())` diversity with `stats::dist()` |
+| `run_ga()` | Documented parallel-mode requirements in Rd documentation |
+| `MutationGaussian` | Fixed method signature to match `MutationSimple` interface; `sigma` is now a class field |
+| `SelectionRoulette` | Replaced magic offset `0.01` with documented `1e-6`; handles all-equal fitness |
+| `plot_diagnostics()` | Added user-configurable `conv_threshold` parameter |
+| `plot_diversity()` | Error message now includes actionable corrective instruction |
+| `Population` | Completed `initialize()`, `evaluate()`, and `get_best()` |
+| `GeneticAlgorithm` | Completed `run()` method (delegates to `run_ga()`) |
+| Tests | Added full `testthat` suite (60+ tests across 6 files) |
+
+---
+
+# Conclusion
+
+**geneOptimize** provides a production-ready, extensible framework for genetic
+and memetic algorithms in R.  Its R6-based architecture enables easy operator
+swapping and extension, while the `run_ga()` functional interface keeps common
+use cases concise.  Version 1.1.0 focuses on correctness, usability, and
+testability — making the package suitable for both research prototyping and
+production variable selection pipelines.
+
+---
+
+# References

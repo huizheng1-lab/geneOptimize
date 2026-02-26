@@ -108,7 +108,11 @@ plot_diversity <- function(x, col = "purple", lwd = 2, type = "l", ...) {
   }
   
   if (is.null(x$diversity_history)) {
-    stop("Diversity history not available. Enable diversity tracking in run_ga().")
+    stop(paste0(
+      "Diversity history not available. Re-run run_ga() with ",
+      "'track_diversity = TRUE':\n",
+      "  run_ga(..., track_diversity = TRUE)"
+    ))
   }
   
   generations <- seq_along(x$diversity_history)
@@ -122,66 +126,73 @@ plot_diversity <- function(x, col = "purple", lwd = 2, type = "l", ...) {
 }
 
 #' Diagnostic Plot for GA Results
-#' 
+#'
 #' Creates a comprehensive 4-panel diagnostic plot:
 #' 1. Convergence curve
-#' 2. Fitness distribution (boxplot per generation)
-#' 3. Improvement rate
-#' 4. Summary statistics
-#' 
+#' 2. Improvement per generation
+#' 3. Relative rate of fitness change
+#' 4. Summary statistics with convergence status
+#'
 #' @param x gene_opt_res object.
 #' @param mfrow Set custom mfrow (default: c(2, 2)).
-#' @param ... Additional arguments.
+#' @param conv_threshold Numeric in (0, 1).  Fraction of best fitness used as
+#'   the convergence threshold: if the improvement over the last 10 generations
+#'   is less than \code{conv_threshold * |best_fitness|}, the run is marked as
+#'   CONVERGED (default: 0.001, i.e., 0.1\%).
+#' @param ... Additional arguments passed to \code{plot_convergence()}.
 #' @return NULL.
 #' @export
-plot_diagnostics <- function(x, mfrow = c(2, 2), ...) {
+plot_diagnostics <- function(x, mfrow = c(2, 2), conv_threshold = 0.001, ...) {
   if (!inherits(x, "gene_opt_res")) {
     stop("x must be a gene_opt_res object")
   }
-  
+  if (!is.numeric(conv_threshold) || length(conv_threshold) != 1 ||
+      conv_threshold <= 0 || conv_threshold >= 1) {
+    stop("'conv_threshold' must be a single numeric value in (0, 1).")
+  }
+
   old_par <- graphics::par(mfrow = mfrow)
   on.exit(graphics::par(old_par))
-  
+
   generations <- seq_along(x$history)
-  
+
   # 1. Convergence
   plot_convergence(x, ...)
-  
-  # 2. Improvement rate
-  improvement <- diff(x$history)
+
+  # 2. Improvement per generation
+  improvement          <- diff(x$history)
   positive_improvement <- pmax(0, improvement)
   graphics::plot(generations[-1], positive_improvement, type = "h", col = "green3",
                  main = "Improvement per Generation",
                  xlab = "Generation", ylab = "Improvement")
   graphics::grid(col = "lightgray")
-  
-  # 3. Rate of change
-  rate_of_change <- abs(diff(x$history)) / pmax(1, x$history[-length(x$history)])
+
+  # 3. Relative rate of change
+  rate_of_change <- abs(diff(x$history)) / pmax(1, abs(x$history[-length(x$history)]))
   graphics::plot(generations[-1], rate_of_change, type = "l", col = "orange",
                  main = "Relative Rate of Fitness Change",
                  xlab = "Generation", ylab = "Relative Change", log = "y")
   graphics::grid(col = "lightgray")
-  
+
   # 4. Summary text
   graphics::plot.new()
   graphics::plot.window(c(0, 1), c(0, 1))
-  text(0.5, 0.8, "GA Optimization Summary", cex = 1.5, font = 2)
-  text(0.5, 0.6, paste("Best Fitness:", round(x$best_fitness, 4)), cex = 1.2)
-  text(0.5, 0.45, paste("Generations:", length(x$history)), cex = 1.2)
-  
-  # Calculate improvement
+  graphics::text(0.5, 0.8, "GA Optimization Summary", cex = 1.5, font = 2)
+  graphics::text(0.5, 0.6, paste("Best Fitness:", round(x$best_fitness, 4)), cex = 1.2)
+  graphics::text(0.5, 0.45, paste("Generations:", length(x$history)), cex = 1.2)
+
   improvement_total <- x$history[length(x$history)] - x$history[1]
-  text(0.5, 0.3, paste("Total Improvement:", round(improvement_total, 4)), cex = 1.2)
-  
-  # Convergence indicator
+  graphics::text(0.5, 0.3, paste("Total Improvement:", round(improvement_total, 4)), cex = 1.2)
+
+  # Convergence indicator using the user-supplied threshold
   if (length(x$history) > 10) {
     recent_improvement <- x$history[length(x$history)] - x$history[length(x$history) - 10]
-    converged <- recent_improvement < 0.001 * abs(x$best_fitness)
-    status <- if (converged) "CONVERGED" else "NOT CONVERGED"
-    text(0.5, 0.15, paste("Status:", status), cex = 1.2, 
-         col = if (converged) "green4" else "red")
+    converged <- recent_improvement < conv_threshold * abs(x$best_fitness)
+    status    <- if (converged) "CONVERGED" else "NOT CONVERGED"
+    graphics::text(0.5, 0.15, paste("Status:", status), cex = 1.2,
+                   col = if (converged) "green4" else "red")
   }
-  
+
   invisible(NULL)
 }
 

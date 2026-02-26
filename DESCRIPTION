@@ -1,7 +1,7 @@
 Package: geneOptimize
 Type: Package
 Title: An Object-Oriented Framework for Genetic Algorithms and Variable Selection in R
-Version: 1.0.0
+Version: 1.1.0
 Authors@R: c(
     person("Hui", "Zheng", email = "huizheng1@gmail.com", role = c("aut", "cre"))
   )
@@ -15,17 +15,19 @@ License: MIT
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.3
-Imports: 
+Imports:
     R6,
     future,
     future.apply,
     stats,
-    graphics
-Suggests: 
+    graphics,
+    grDevices
+Suggests:
     tidymodels,
     testthat (>= 3.0.0),
     knitr,
-    rmarkdown
+    rmarkdown,
+    pROC
 VignetteBuilder: knitr
 URL: https://github.com/huizheng1-lab/geneOptimize
 BugReports: https://github.com/huizheng1-lab/geneOptimize/issues
