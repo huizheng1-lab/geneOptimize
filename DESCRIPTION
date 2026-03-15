@@ -1,7 +1,7 @@
 Package: geneOptimize
 Type: Package
 Title: An Object-Oriented Framework for Genetic Algorithms and Variable Selection in R
-Version: 1.1.0
+Version: 1.2.0
 Authors@R: c(
     person("Hui", "Zheng", email = "huizheng1@gmail.com", role = c("aut", "cre"))
   )

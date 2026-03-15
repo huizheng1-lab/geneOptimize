@@ -50,6 +50,15 @@
 #' @param track_diversity Logical.  Record mean pairwise population diversity
 #'   each generation using \code{stats::dist()} — an O(n^2) operation.
 #'   Default: \code{FALSE}.
+#' @param cache Logical.  If \code{TRUE}, the GA memoizes fitness evaluations
+#'   so that any chromosome that has already been evaluated is not re-evaluated;
+#'   its cached value is returned immediately instead.  This can substantially
+#'   reduce computation when the population converges and many duplicate
+#'   chromosomes appear across generations.  Cache is keyed on the exact gene
+#'   values, so it is most effective for \code{type = "binary"}.  Not
+#'   compatible with \code{parallel = TRUE} (worker processes do not share the
+#'   cache environment); an error is raised if both are set.
+#'   Default: \code{FALSE}.
 #' @param ... Additional arguments forwarded to operator methods.
 #'
 #' @section Parallel Processing:
@@ -78,6 +87,10 @@
 #'     \item{\code{worst_history}}{Worst fitness per generation.}
 #'     \item{\code{diversity_history}}{Mean pairwise distance per generation
 #'       (only present when \code{track_diversity = TRUE}).}
+#'     \item{\code{cache_hits}}{Number of fitness evaluations served from cache
+#'       (only present when \code{cache = TRUE}).}
+#'     \item{\code{cache_size}}{Number of unique chromosomes stored in cache
+#'       (only present when \code{cache = TRUE}).}
 #'     \item{\code{call}}{The matched call.}
 #'   }
 #'
@@ -103,6 +116,7 @@ run_ga <- function(fitness_fn,
                    local_search_every  = 1,
                    local_search_top_k  = NULL,
                    track_diversity     = FALSE,
+                   cache               = FALSE,
                    ...) {
 
   # -------------------------------------------------------------------------
@@ -164,6 +178,35 @@ run_ga <- function(fitness_fn,
     if (any(lower >= upper)) {
       stop("All elements of 'lower' must be strictly less than the ",
            "corresponding elements of 'upper'.")
+    }
+  }
+  if (!is.logical(cache) || length(cache) != 1) {
+    stop("'cache' must be a single logical value (TRUE or FALSE).")
+  }
+  if (cache && parallel && cores > 1) {
+    stop("'cache = TRUE' is not compatible with parallel evaluation ",
+         "('parallel = TRUE', 'cores > 1'): worker processes do not share ",
+         "the cache environment. Set 'parallel = FALSE' or 'cache = FALSE'.")
+  }
+
+  # -------------------------------------------------------------------------
+  # Fitness Function Memoization (cache = TRUE)
+  # -------------------------------------------------------------------------
+  .cache_env  <- NULL
+  .cache_hits <- 0L
+
+  if (cache) {
+    .cache_env    <- new.env(hash = TRUE, parent = emptyenv())
+    .fitness_orig <- fitness_fn
+    fitness_fn <- function(chromosome) {
+      key <- paste(chromosome, collapse = "-")
+      if (exists(key, envir = .cache_env, inherits = FALSE)) {
+        .cache_hits <<- .cache_hits + 1L
+        return(get(key, envir = .cache_env, inherits = FALSE))
+      }
+      val <- .fitness_orig(chromosome)
+      assign(key, val, envir = .cache_env)
+      val
     }
   }
 
@@ -310,6 +353,10 @@ run_ga <- function(fitness_fn,
   res$worst_history <- worst_history
   if (track_diversity) {
     res$diversity_history <- diversity_history
+  }
+  if (cache) {
+    res$cache_hits <- .cache_hits
+    res$cache_size <- length(ls(.cache_env))
   }
 
   return(res)

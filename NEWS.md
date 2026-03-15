@@ -1,3 +1,16 @@
+# geneOptimize 1.2.0
+
+## New Features
+
+- `run_ga()`: Added `cache` parameter (default `FALSE`).  When `TRUE`, fitness
+  evaluations are memoized using an in-process hash-table (R environment).  Any
+  chromosome that has already been evaluated is not re-evaluated; its cached
+  value is returned immediately.  The result object gains two new fields:
+  `cache_hits` (number of evaluations served from cache) and `cache_size`
+  (number of unique chromosomes stored).  Using `cache = TRUE` together with
+  `parallel = TRUE` / `cores > 1` raises an informative error, as worker
+  processes do not share the cache environment.
+
 # geneOptimize 1.1.0
 
 ## New Features
